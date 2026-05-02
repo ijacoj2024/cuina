@@ -2,401 +2,571 @@
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Cuina Intel·ligent</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cuina de Casa Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
+        :root {
+            --primary: #f59e0b;
+            --dark: #1e293b;
+            --danger: #ef4444;
+        }
+
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: #f1f5f9; 
-            min-height: 100vh;
+            background-color: #f8fafc; 
+            padding-bottom: 100px;
         }
 
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .day-card-dark {
+            background-color: var(--dark);
+            color: white;
+            border-radius: 1.5rem;
+            border: 1px solid #334155;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-card {
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
+        }
+
+        .active-tab {
+            background-color: var(--primary) !important;
+            color: white !important;
+            border-color: var(--primary) !important;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        .day-card { 
-            min-height: 380px; 
-            display: flex; 
-            flex-direction: column; 
-            background-color: #1e293b; 
-            border: 1px solid #334155;
+        .btn-add-inline {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 2px 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-add-inline:hover { background: var(--primary); }
+
+        .caducitat-alerta {
+            background-color: var(--danger);
             color: white;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            margin-top: 8px;
+            animation: pulse-red 2s infinite;
         }
 
-        .day-card.today {
-            background-color: #0f172a;
-            border: 3px solid #f59e0b;
-            transform: scale(1.02);
-            z-index: 10;
+        @keyframes pulse-red {
+            0 { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
-        .recipe-chip {
-            background: rgba(51, 65, 85, 0.5);
-            border-left: 3px solid #f59e0b;
+        textarea {
+            resize: none;
+            min-height: 80px;
         }
 
-        .tab-active {
-            border-bottom: 3px solid #f59e0b;
-            color: #f59e0b;
+        .badge-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 12px;
         }
+
+        .history-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+        }
+        .history-item:last-child { border-bottom: none; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="text-slate-900">
 
-    <div id="app-root" class="max-w-7xl mx-auto relative">
+    <div id="app-root" class="max-w-md mx-auto md:max-w-7xl px-4 py-6">
+        
         <!-- Capçalera -->
-        <header class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div>
-                <h1 class="text-4xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                    Cuina de Casa <span class="text-orange-500">🥘</span>
-                </h1>
-                <div class="flex items-center gap-2 mt-2">
-                    <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></div>
-                    <p id="status-text" class="text-slate-500 text-xs font-bold uppercase tracking-wider">Connectant amb Firebase...</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-4 bg-white p-2.5 rounded-[2rem] shadow-md border border-slate-200">
-                <button id="btn-prev" class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-slate-100 transition-all text-slate-600 text-xl font-bold border border-slate-100">〈</button>
-                <span id="rango-fechas" class="px-6 font-black text-slate-800 text-lg min-w-[160px] text-center tracking-tight">Carregant...</span>
-                <button id="btn-next" class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-slate-100 transition-all text-slate-600 text-xl font-bold border border-slate-100">〉</button>
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-extrabold tracking-tight">La meva <span class="text-orange-500">Cuina</span></h1>
+            <div class="flex items-center gap-2 bg-white p-1.5 rounded-full shadow-sm border">
+                <button id="btn-prev" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 font-bold">‹</button>
+                <span id="rango-fechas" class="text-xs font-bold px-2 text-slate-600">...</span>
+                <button id="btn-next" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 font-bold">〉</button>
             </div>
         </header>
 
-        <!-- Calendari de 7 dies -->
-        <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-7 gap-5 mb-12">
-            <!-- Es genera per JS -->
+        <!-- Calendari ràpid -->
+        <section id="calendar-section" class="mb-8">
+            <div id="calendar-grid" class="flex md:grid md:grid-cols-7 gap-4 overflow-x-auto snap-x no-scrollbar pb-4"></div>
+        </section>
+
+        <!-- Filtres -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6">
+            <button onclick="setTab('favs')" id="btn-favs" class="px-5 py-3 rounded-2xl bg-white border font-bold text-sm whitespace-nowrap shadow-sm">❤️ Preferits</button>
+            <button onclick="setTab('probant')" id="btn-probant" class="px-5 py-3 rounded-2xl bg-white border font-bold text-sm whitespace-nowrap shadow-sm">👀 Per provar</button>
+            <button onclick="setTab('all')" id="btn-all" class="active-tab px-5 py-3 rounded-2xl bg-white border font-bold text-sm whitespace-nowrap shadow-sm">📂 Tots</button>
+            <button onclick="setTab('caducitat')" id="btn-caducitat" class="px-5 py-3 rounded-2xl bg-white border font-bold text-sm whitespace-nowrap shadow-sm">⌛ Caducitat</button>
         </div>
 
-        <!-- Secció de Receptes / Aliments -->
-        <div class="bg-white rounded-[3rem] p-8 shadow-xl border border-slate-200">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-100 pb-4">
-                <div class="flex gap-8">
-                    <button id="tab-favs" onclick="window.setTab('favs')" class="text-xl font-black transition-all tab-active pb-2">⭐ Preferits</button>
-                    <button id="tab-all" onclick="window.setTab('all')" class="text-xl font-black text-slate-400 transition-all pb-2">📂 Tots els Aliments</button>
-                </div>
-                <div class="relative w-full md:w-64">
-                    <input type="text" id="search-main" placeholder="Cerca al receptari..." class="w-full pl-10 pr-4 py-3 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none text-sm font-bold text-slate-700">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                </div>
+        <!-- Contingut Dinàmic -->
+        <div id="dynamic-content">
+            <!-- Cercador (només visible en pestanyes de receptes) -->
+            <div id="search-container" class="relative mb-6">
+                <input type="text" id="search-input" placeholder="Cerca una recepta al teu llibre..." class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-orange-500 font-bold outline-none">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl">🔍</span>
             </div>
-            
-            <div id="grid-aliments" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[600px] overflow-y-auto custom-scroll pr-4">
-                <!-- Es genera per JS -->
-            </div>
-        </div>
-    </div>
 
-    <!-- Modal d'Afegir Plat al Calendari -->
-    <div id="modal-receptes" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden">
-            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div>
-                    <h3 class="font-black text-slate-800 text-2xl">Afegir <span id="modal-dia-label" class="text-orange-500">...</span></h3>
-                    <p class="text-slate-400 text-sm font-medium mt-1">Busca i selecciona un plat</p>
-                </div>
-                <button onclick="window.closeModals()" class="bg-slate-200 hover:bg-slate-300 w-12 h-12 rounded-full flex items-center justify-center text-slate-600 text-2xl">×</button>
-            </div>
-            <div class="p-6">
-                <input type="text" id="modal-search-input" onkeyup="window.renderModalList()" placeholder="Escriu el nom del plat..." class="w-full px-6 py-4 bg-slate-100 border-2 border-slate-100 rounded-2xl focus:border-orange-500 focus:ring-0 outline-none font-bold text-slate-700 mb-4">
-                <div id="llista-modal" class="max-h-[400px] overflow-y-auto custom-scroll space-y-2 pr-2">
-                    <!-- JS -->
-                </div>
-            </div>
-        </div>
-    </div>
+            <!-- Llista principal -->
+            <div id="main-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
 
-    <!-- Modal d'Edició d'Aliment -->
-    <div id="modal-edit-aliment" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl overflow-hidden">
-            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-orange-50">
-                <h3 class="font-black text-slate-800 text-2xl">Editar Aliment</h3>
-                <button onclick="window.closeModals()" class="text-slate-400 hover:text-slate-600 text-3xl">×</button>
-            </div>
-            <div class="p-8 space-y-6">
-                <input type="hidden" id="edit-id">
-                <div>
-                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Nom de l'Aliment</label>
-                    <input type="text" id="edit-nom" class="w-full px-6 py-4 bg-slate-100 rounded-2xl font-bold text-slate-800 border-none outline-none focus:ring-2 focus:ring-orange-500">
+            <!-- Secció Especial de Caducitat (oculta per defecte) -->
+            <div id="caducitat-section" class="hidden space-y-6">
+                <div class="bg-orange-50 p-6 rounded-[2rem] border border-orange-100">
+                    <h2 class="font-black text-lg text-orange-800 mb-4 tracking-tight uppercase text-xs">Afegir producte que caduca</h2>
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <input type="text" id="cad-input-nom" oninput="showCadHistory()" placeholder="Escriu el nom de l'aliment..." class="w-full p-4 bg-white rounded-2xl font-bold border-none shadow-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                            <div id="cad-history" class="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl z-50 max-h-48 overflow-y-auto hidden border border-slate-100 custom-scroll"></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="date" id="cad-input-data" class="flex-1 p-4 bg-white rounded-2xl font-bold border-none shadow-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                            <button onclick="saveQuickCaducitat()" class="bg-orange-500 text-white px-6 rounded-2xl font-black text-sm">AFEGIR</button>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Ingredients / Notes</label>
-                    <textarea id="edit-ingredients" rows="3" class="w-full px-6 py-4 bg-slate-100 rounded-2xl font-medium text-slate-600 border-none outline-none focus:ring-2 focus:ring-orange-500" placeholder="Llista d'ingredients..."></textarea>
-                </div>
-                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                    <span class="font-bold text-slate-700">Afegir a Preferits ⭐</span>
-                    <input type="checkbox" id="edit-fav" class="w-6 h-6 accent-orange-500">
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <button onclick="window.saveAliment()" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-orange-500 transition-colors">GUARDAR CANVIS</button>
-                    <button onclick="window.deleteAlimentPermanently()" class="px-6 bg-red-100 text-red-600 rounded-2xl hover:bg-red-200 transition-colors">🗑️</button>
+
+                <div class="px-2">
+                    <h3 class="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-4">Llista d'avisos actius</h3>
+                    <div id="cad-tab-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- Botó flotant -->
+    <button onclick="openCreateAliment()" class="fixed bottom-24 right-6 w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center text-white text-3xl shadow-lg z-40 active:scale-90 transition-transform">＋</button>
+
+    <!-- Modal -->
+    <div id="modal-container" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div id="modal-content" class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh] custom-scroll"></div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        (function() {
-            let db;
-            let offset = 0, selFecha = "", selTipo = "", activeTab = 'favs';
-            let allAlimentsRaw = {}, allAliments = [], allSelections = {}, allCaducitats = {};
+        let db;
+        let offset = 0;
+        let activeTab = 'all';
+        let allAliments = [];
+        let allSelections = {};
+        let allCaducitats = {};
 
-            const toISO = (d) => {
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, "0");
-                const day = String(d.getDate()).padStart(2, "0");
-                return `${year}-${month}-${day}`;
-            };
-            const toDM = (d) => d.getDate() + "/" + (d.getMonth()+1);
+        const mesos = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
+        const diesSetmana = ["Diumenge", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte"];
 
-            function initFirebase() {
-                if (typeof firebase === 'undefined') return;
-                try {
-                    const config = { databaseURL: "https://calendari-menjars-default-rtdb.europe-west1.firebasedatabase.app" };
-                    if (!firebase.apps.length) firebase.initializeApp(config);
-                    db = firebase.database();
-                    setupListeners();
-                } catch (e) {
-                    console.error("Error Firebase:", e);
-                }
-            }
-
-            function setupListeners() {
-                if (!db) return;
+        function initFirebase() {
+            try {
+                const config = { databaseURL: "https://calendari-menjars-default-rtdb.europe-west1.firebasedatabase.app" };
+                if (!firebase.apps.length) firebase.initializeApp(config);
+                db = firebase.database();
+                
                 db.ref('aliments').on('value', s => {
-                    allAlimentsRaw = s.val() || {};
-                    allAliments = [];
-                    Object.keys(allAlimentsRaw).forEach(key => {
-                        let item = allAlimentsRaw[key];
-                        if (typeof item === 'string') item = { nom: item };
-                        allAliments.push({ ...item, id: key });
-                    });
-                    allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || ""));
+                    const data = s.val() || {};
+                    allAliments = Object.keys(data).map(key => ({ 
+                        ...data[key], 
+                        id: key,
+                        nom: data[key].nom || "Sense nom"
+                    })).sort((a,b) => a.nom.localeCompare(b.nom));
                     render();
-                }, err => console.error("Error llegint aliments:", err));
+                });
 
                 db.ref('seleccions').on('value', s => { 
                     allSelections = s.val() || {}; 
                     render(); 
-                }, err => console.error("Error llegint seleccions:", err));
-
-                db.ref('aliments_caducitat').on('value', s => { 
-                    allCaducitats = s.val() || {}; 
-                    const dot = document.getElementById('status-dot');
-                    if (dot) dot.classList.replace('bg-orange-500', 'bg-emerald-500');
-                    const txt = document.getElementById('status-text');
-                    if (txt) txt.innerText = "Sincronitzat";
-                    render(); 
-                }, err => console.error("Error llegint caducitats:", err));
-            }
-
-            window.setTab = (t) => {
-                activeTab = t;
-                const tabFavs = document.getElementById('tab-favs');
-                const tabAll = document.getElementById('tab-all');
-                if (tabFavs) tabFavs.className = t === 'favs' ? 'text-xl font-black transition-all tab-active pb-2' : 'text-xl font-black text-slate-400 transition-all pb-2';
-                if (tabAll) tabAll.className = t === 'all' ? 'text-xl font-black transition-all tab-active pb-2' : 'text-xl font-black text-slate-400 transition-all pb-2';
-                renderAliments();
-            };
-
-            window.openWpModal = (f, t) => {
-                selFecha = f; selTipo = t;
-                const label = document.getElementById('modal-dia-label');
-                if (label) label.innerText = t === 'comida' ? 'Dinar' : 'Sopar';
-                const modal = document.getElementById('modal-receptes');
-                if (modal) modal.classList.remove('hidden');
-                const searchInput = document.getElementById('modal-search-input');
-                if (searchInput) {
-                    searchInput.value = "";
-                    setTimeout(() => searchInput.focus(), 100);
-                }
-                window.renderModalList();
-            };
-
-            window.renderModalList = () => {
-                const searchInput = document.getElementById('modal-search-input');
-                const query = searchInput ? searchInput.value.toLowerCase() : "";
-                const box = document.getElementById('llista-modal');
-                if (!box) return;
-                box.innerHTML = "";
-                
-                const filtered = allAliments.filter(a => (a.nom || "").toLowerCase().includes(query));
-                
-                filtered.forEach(a => {
-                    const item = document.createElement('div');
-                    item.className = "flex justify-between items-center p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl cursor-pointer transition-all border border-slate-100 group";
-                    item.onclick = () => window.addPlat(a.nom);
-                    item.innerHTML = `<div><span class="text-slate-800 font-bold">${a.nom}</span> ${a.fav ? '⭐' : ''}</div><span class="text-orange-500 font-black text-xl group-hover:translate-x-1 transition-transform">＋</span>`;
-                    box.appendChild(item);
                 });
-            };
 
-            window.addPlat = (nom) => {
-                if (!db) return;
-                let current = allSelections[selFecha]?.[selTipo];
-                let plats = Array.isArray(current) ? [...current] : [];
-                plats.push(nom);
-                db.ref('seleccions/' + selFecha + '/' + selTipo).set(plats).then(() => window.closeModals());
-            };
+                db.ref('aliments_caducitat').on('value', s => {
+                    allCaducitats = s.val() || {};
+                    render();
+                });
+            } catch (e) { console.error(e); }
+        }
 
-            window.delPlat = (f, t, i) => {
-                if (!db || !allSelections[f] || !allSelections[f][t]) return;
-                let plats = [...(allSelections[f][t] || [])];
-                plats.splice(i, 1);
-                db.ref('seleccions/' + f + '/' + t).set(plats);
-            };
+        window.setTab = function(tab) {
+            activeTab = tab;
+            render();
+        };
 
-            window.openEditAliment = (id) => {
-                const a = allAliments.find(x => x.id === id);
-                if (!a) return;
-                const modal = document.getElementById('modal-edit-aliment');
-                if (!modal) return;
+        function render() {
+            renderHeader();
+            renderCalendar();
+            renderTabContent();
+            updateUIState();
+        }
 
-                document.getElementById('edit-id').value = id;
-                document.getElementById('edit-nom').value = a.nom || "";
-                document.getElementById('edit-ingredients').value = a.ingredients || "";
-                document.getElementById('edit-fav').checked = !!a.fav;
-                modal.classList.remove('hidden');
-            };
+        function renderHeader() {
+            const hoy = new Date();
+            const day = hoy.getDay(), diff = hoy.getDate() - (day == 0 ? 6 : day - 1);
+            const lunes = new Date(new Date().setDate(diff + (offset * 7)));
+            const dom = new Date(lunes); dom.setDate(lunes.getDate() + 6);
+            const rangeEl = document.getElementById('rango-fechas');
+            if (rangeEl) rangeEl.innerText = `${lunes.getDate()} ${mesos[lunes.getMonth()]} - ${dom.getDate()} ${mesos[dom.getMonth()]}`;
+        }
 
-            window.saveAliment = () => {
-                if (!db) return;
-                const id = document.getElementById('edit-id').value;
-                const update = {
-                    nom: document.getElementById('edit-nom').value,
-                    ingredients: document.getElementById('edit-ingredients').value,
-                    fav: document.getElementById('edit-fav').checked
-                };
-                db.ref('aliments/' + id).update(update).then(() => window.closeModals());
-            };
+        function updateUIState() {
+            ['favs', 'probant', 'all', 'caducitat'].forEach(t => {
+                const btn = document.getElementById('btn-'+t);
+                if (btn) btn.classList.toggle('active-tab', activeTab === t);
+            });
+        }
 
-            window.deleteAlimentPermanently = () => {
-                if (!db) return;
-                const id = document.getElementById('edit-id').value;
-                if(confirm("Segur que vols esborrar aquest aliment per sempre de la llista?")) {
-                    db.ref('aliments/' + id).remove().then(() => window.closeModals());
-                }
-            };
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            if (!grid) return;
+            grid.innerHTML = "";
+            const hoy = new Date(); hoy.setHours(0,0,0,0);
+            const day = hoy.getDay(), diff = hoy.getDate() - (day == 0 ? 6 : day - 1);
+            const lunes = new Date(new Date().setDate(diff + (offset * 7)));
 
-            window.closeModals = () => {
-                const m1 = document.getElementById('modal-receptes');
-                const m2 = document.getElementById('modal-edit-aliment');
-                if (m1) m1.classList.add('hidden');
-                if (m2) m2.classList.add('hidden');
-            };
+            for (let i = 0; i < 7; i++) {
+                const curr = new Date(lunes); curr.setDate(lunes.getDate() + i);
+                const iso = curr.toISOString().split('T')[0];
+                const esHoy = curr.getTime() === hoy.getTime();
+                const nomDia = diesSetmana[curr.getDay()];
+                const nomMes = mesos[curr.getMonth()];
 
-            function render() {
-                const calendarGrid = document.getElementById('calendar-grid');
-                if (!calendarGrid) return;
+                let alertaCaducitat = "";
+                Object.values(allCaducitats).forEach(item => {
+                    if (item.caducitat === iso) {
+                        alertaCaducitat += `<div class="caducitat-alerta">🚨 CADUCA: ${item.nom}</div>`;
+                    }
+                });
 
-                const hoy = new Date(); hoy.setHours(0,0,0,0);
-                const d = new Date();
-                const day = d.getDay(), diff = d.getDate() - (day == 0 ? 6 : day - 1);
-                const lunes = new Date(d.setDate(diff + (offset * 7))); lunes.setHours(0,0,0,0);
-                const dom = new Date(lunes); dom.setDate(lunes.getDate() + 6);
-                
-                const rangeLabel = document.getElementById('rango-fechas');
-                if (rangeLabel) rangeLabel.innerText = toDM(lunes) + " - " + toDM(dom);
-                
-                const diesNames = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
-                calendarGrid.innerHTML = "";
-
-                for (let i = 0; i < 7; i++) {
-                    const curr = new Date(lunes); curr.setDate(lunes.getDate() + i);
-                    const iso = toISO(curr);
-                    const esHoy = curr.toDateString() === hoy.toDateString();
-
-                    let cadHtml = "";
-                    Object.keys(allCaducitats).forEach(key => {
-                        if (allCaducitats[key].caducitat === iso) {
-                            cadHtml += `<div class="mt-2 p-2 bg-red-500 text-white rounded-xl text-[10px] font-black shadow-sm">⚠️ ${allCaducitats[key].nom}</div>`;
-                        }
-                    });
-
-                    const card = document.createElement('div');
-                    card.className = `day-card p-5 rounded-[2rem] ${esHoy ? 'today' : ''}`;
-                    
-                    let inner = `<div class="text-center mb-6">
-                        <p class="text-[10px] font-black uppercase ${esHoy ? 'text-orange-400' : 'text-slate-500'}">${diesNames[i]}</p>
-                        <p class="text-4xl font-black text-white">${curr.getDate()}</p>
-                        ${cadHtml}
-                    </div>`;
-
-                    ["comida", "cena"].forEach(t => {
-                        const icon = t === 'comida' ? '☀️' : '🌙';
-                        const plats = (allSelections[iso] && allSelections[iso][t]) ? allSelections[iso][t] : [];
-                        let pList = Array.isArray(plats) ? plats.map((n, idx) => `
-                            <div class="recipe-chip flex justify-between items-center p-2 rounded-xl mb-1 text-[11px] text-slate-100">
-                                <span class="truncate">${n}</span>
-                                <button onclick="window.delPlat('${iso}','${t}',${idx})" class="text-slate-400 hover:text-white px-1">×</button>
-                            </div>
-                        `).join('') : '';
-
-                        inner += `<div class="mb-4">
-                            <p class="text-[9px] font-black text-slate-500 tracking-widest mb-2">${icon} ${t.toUpperCase()}</p>
-                            ${pList}
-                            <button onclick="window.openWpModal('${iso}','${t}')" class="w-full py-2 text-[10px] font-black text-slate-500 border border-dashed border-slate-700 rounded-xl hover:bg-slate-800 mt-2">＋ AFegir</button>
-                        </div>`;
-                    });
-
-                    card.innerHTML = inner;
-                    calendarGrid.appendChild(card);
-                }
-                renderAliments();
-            }
-
-            function renderAliments() {
-                const box = document.getElementById('grid-aliments');
-                if (!box) return;
-                const searchMain = document.getElementById('search-main');
-                const filter = searchMain ? searchMain.value.toLowerCase() : "";
-                box.innerHTML = "";
-                
-                let filtered = allAliments.filter(a => (a.nom || "").toLowerCase().includes(filter));
-                if (activeTab === 'favs') filtered = filtered.filter(a => a.fav);
-
-                filtered.forEach(a => {
-                    const card = document.createElement('div');
-                    card.className = "bg-slate-50 p-4 rounded-3xl border-2 border-slate-100 flex flex-col items-center text-center gap-2 hover:border-orange-300 hover:bg-white transition-all cursor-pointer relative group";
-                    card.onclick = () => window.openEditAliment(a.id);
-                    card.innerHTML = `
-                        <div class="w-12 h-12 rounded-xl bg-white text-orange-500 flex items-center justify-center font-black text-xl shadow-sm border border-slate-100">${(a.nom || "?").charAt(0).toUpperCase()}</div>
-                        <span class="text-xs font-black text-slate-800 leading-tight">${a.nom}</span>
-                        ${a.fav ? '<span class="absolute top-2 right-2 text-xs">⭐</span>' : ''}
-                        <div class="absolute inset-0 bg-slate-900/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
-                            <span class="bg-white px-3 py-1 rounded-full text-[10px] font-black text-slate-800 shadow-sm">EDITAR</span>
+                const col = document.createElement('div');
+                col.className = "min-w-[85vw] md:min-w-0 snap-center";
+                col.innerHTML = `
+                    <div class="day-card-dark p-5 ${esHoy ? 'ring-4 ring-orange-500/30 border-orange-500' : ''}">
+                        <div class="mb-4">
+                            <p class="text-[10px] font-black uppercase text-orange-400 tracking-widest">${nomDia}</p>
+                            <h3 class="text-xl font-black leading-tight">${curr.getDate()} <span class="text-slate-400 text-sm font-bold">de ${nomMes}</span></h3>
+                            ${alertaCaducitat}
                         </div>
-                    `;
-                    box.appendChild(card);
-                });
+                        <div class="space-y-6 flex-grow">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-black text-slate-400 flex items-center gap-1">☀️ DINAR</span>
+                                    <button onclick="openSelector('${iso}', 'comida')" class="btn-add-inline font-black">＋</button>
+                                </div>
+                                <div class="space-y-1">${renderPlats(iso, 'comida')}</div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-black text-slate-400 flex items-center gap-1">🌙 SOPAR</span>
+                                    <button onclick="openSelector('${iso}', 'cena')" class="btn-add-inline font-black">＋</button>
+                                </div>
+                                <div class="space-y-1">${renderPlats(iso, 'cena')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(col);
+            }
+        }
+
+        function renderPlats(fecha, tipo) {
+            const plats = (allSelections[fecha] && allSelections[fecha][tipo]) ? allSelections[fecha][tipo] : [];
+            if (!Array.isArray(plats) || plats.length === 0) return '<p class="text-[10px] italic text-slate-600 px-1">Buit</p>';
+            return plats.map((n, idx) => `
+                <div class="flex justify-between items-start bg-slate-800/80 border border-slate-700 p-2.5 rounded-xl text-[11px] font-bold">
+                    <span class="break-words leading-tight pr-2">${n}</span>
+                    <button onclick="delPlatSetmanal('${fecha}','${tipo}',${idx})" class="text-red-400 hover:text-red-300 w-5 h-5 flex-shrink-0 flex items-center justify-center bg-red-400/10 rounded-lg">×</button>
+                </div>
+            `).join('');
+        }
+
+        function renderTabContent() {
+            const mainGrid = document.getElementById('main-grid');
+            const searchContainer = document.getElementById('search-container');
+            const cadSection = document.getElementById('caducitat-section');
+
+            if (activeTab === 'caducitat') {
+                mainGrid.classList.add('hidden');
+                searchContainer.classList.add('hidden');
+                cadSection.classList.remove('hidden');
+                renderCaducitatTabList();
+            } else {
+                mainGrid.classList.remove('hidden');
+                searchContainer.classList.remove('hidden');
+                cadSection.classList.add('hidden');
+                renderMainGrid();
+            }
+        }
+
+        function renderMainGrid() {
+            const grid = document.getElementById('main-grid');
+            const search = document.getElementById('search-input')?.value.toLowerCase() || "";
+            grid.innerHTML = "";
+
+            let filtered = allAliments.filter(a => a.nom.toLowerCase().includes(search));
+            if (activeTab === 'favs') filtered = filtered.filter(a => a.fav);
+            if (activeTab === 'probant') filtered = filtered.filter(a => a.provar);
+
+            filtered.forEach(a => {
+                const card = document.createElement('div');
+                card.className = "mobile-card p-4 cursor-pointer flex flex-col items-center text-center gap-3 active:scale-95 transition-transform relative overflow-hidden";
+                card.onclick = () => openEditAliment(a.id);
+                
+                let statusIcons = "";
+                if (a.fav) statusIcons += `<span class="badge-icon" title="Preferit">❤️</span>`;
+                if (a.provar) statusIcons += `<span class="badge-icon" title="Per provar">👀</span>`;
+                if (a.link && a.link.trim() !== "") statusIcons += `<span class="badge-icon" title="Té enllaç">🔗</span>`;
+
+                card.innerHTML = `
+                    <div class="w-12 h-12 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center font-black text-lg">
+                        ${a.nom.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="w-full">
+                        <h4 class="font-black text-[13px] text-slate-700 mb-2 leading-tight truncate px-1">${a.nom}</h4>
+                        <div class="flex justify-center gap-1.5 min-h-[24px]">
+                            ${statusIcons}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- Gestió Caducitats a la Pestanya ---
+
+        function renderCaducitatTabList() {
+            const list = document.getElementById('cad-tab-list');
+            list.innerHTML = "";
+            const keys = Object.keys(allCaducitats).sort((a,b) => allCaducitats[a].caducitat.localeCompare(allCaducitats[b].caducitat));
+            
+            if (keys.length === 0) {
+                list.innerHTML = "<p class='text-slate-400 text-xs italic p-4'>No hi ha cap avís registrat.</p>";
+                return;
             }
 
-            // Inicialització segura
-            const interval = setInterval(() => {
-                if (typeof firebase !== 'undefined') {
-                    clearInterval(interval);
-                    initFirebase();
-                }
-            }, 100);
+            keys.forEach(key => {
+                const item = allCaducitats[key];
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center";
+                card.innerHTML = `
+                    <div>
+                        <p class="text-[9px] text-orange-500 font-black uppercase tracking-widest">${item.caducitat.split('-').reverse().join('/')}</p>
+                        <p class="font-black text-sm text-slate-800">${item.nom}</p>
+                    </div>
+                    <button onclick="delCaducitat('${key}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">🗑️</button>
+                `;
+                list.appendChild(card);
+            });
+        }
 
-            window.onload = () => {
-                const bp = document.getElementById('btn-prev');
-                const bn = document.getElementById('btn-next');
-                const sm = document.getElementById('search-main');
-                if (bp) bp.onclick = () => { offset--; render(); };
-                if (bn) bn.onclick = () => { offset++; render(); };
-                if (sm) sm.onkeyup = renderAliments;
-            };
-        })();
+        window.showCadHistory = function() {
+            const input = document.getElementById('cad-input-nom');
+            const history = document.getElementById('cad-history');
+            const val = input.value.toLowerCase();
+            
+            if (!val) {
+                history.classList.add('hidden');
+                return;
+            }
+
+            const matches = allAliments.filter(a => a.nom.toLowerCase().includes(val)).slice(0, 5);
+            if (matches.length > 0) {
+                history.innerHTML = matches.map(m => `
+                    <div class="history-item font-bold text-sm text-slate-600 hover:bg-orange-50" onclick="selectCadHistory('${m.nom.replace(/'/g, "\\'")}')">
+                        ${m.nom}
+                    </div>
+                `).join('');
+                history.classList.remove('hidden');
+            } else {
+                history.classList.add('hidden');
+            }
+        };
+
+        window.selectCadHistory = function(nom) {
+            document.getElementById('cad-input-nom').value = nom;
+            document.getElementById('cad-history').classList.add('hidden');
+        };
+
+        window.saveQuickCaducitat = function() {
+            const nom = document.getElementById('cad-input-nom').value;
+            const caducitat = document.getElementById('cad-input-data').value;
+            if(!nom || !caducitat) return;
+            
+            db.ref('aliments_caducitat').push({ nom, caducitat }).then(() => {
+                document.getElementById('cad-input-nom').value = "";
+                document.getElementById('cad-input-data').value = "";
+                renderCaducitatTabList();
+            });
+        };
+
+        window.delCaducitat = function(key) {
+            if(confirm("Eliminar avís?")) db.ref('aliments_caducitat/' + key).remove();
+        };
+
+        // --- Modals i Altres ---
+
+        window.openSelector = function(fecha, tipo) {
+            const tText = tipo === 'comida' ? 'Dinar' : 'Sopar';
+            showModal(`
+                <div class="p-8 space-y-6">
+                    <div>
+                        <h3 class="text-xl font-black text-slate-800">Afegir al ${tText}</h3>
+                        <p class="text-xs text-slate-400 font-bold uppercase">${fecha}</p>
+                    </div>
+                    <input type="hidden" id="modal-fecha" value="${fecha}">
+                    <input type="hidden" id="modal-tipo" value="${tipo}">
+                    <input type="text" id="modal-search" placeholder="Busca la recepta..." oninput="filterModalRecipes()" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none ring-2 ring-slate-100 focus:ring-orange-500 outline-none">
+                    <div id="modal-recipe-list" class="space-y-2 max-h-64 overflow-y-auto custom-scroll pr-1"></div>
+                    <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
+                </div>
+            `);
+            filterModalRecipes();
+        };
+
+        window.filterModalRecipes = function() {
+            const txt = document.getElementById('modal-search').value.toLowerCase();
+            const list = document.getElementById('modal-recipe-list');
+            list.innerHTML = "";
+            allAliments.filter(a => a.nom.toLowerCase().includes(txt)).forEach(a => {
+                const item = document.createElement('div');
+                item.className = "p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl cursor-pointer font-bold text-sm flex justify-between items-center transition-colors";
+                item.onclick = () => addPlatSetmanal(a.nom);
+                item.innerHTML = `<span class="pr-2">${a.nom}</span> <span class="flex-shrink-0 bg-white w-8 h-8 rounded-full flex items-center justify-center text-orange-500 shadow-sm">＋</span>`;
+                list.appendChild(item);
+            });
+        };
+
+        function addPlatSetmanal(nom) {
+            const fecha = document.getElementById('modal-fecha').value;
+            const tipo = document.getElementById('modal-tipo').value;
+            let plats = Array.isArray(allSelections[fecha]?.[tipo]) ? [...allSelections[fecha][tipo]] : [];
+            plats.push(nom);
+            db.ref('seleccions/' + fecha + '/' + tipo).set(plats).then(closeModal);
+        }
+
+        window.delPlatSetmanal = function(fecha, tipo, idx) {
+            let plats = [...allSelections[fecha][tipo]];
+            plats.splice(idx, 1);
+            db.ref('seleccions/' + fecha + '/' + tipo).set(plats);
+        };
+
+        window.openEditAliment = function(id) {
+            const a = allAliments.find(x => x.id === id);
+            if (!a) return;
+            showModal(`
+                <div class="p-8 space-y-6">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xl font-black text-slate-800">Detalls de la Recepta</h3>
+                        <div class="flex gap-2">
+                             <button onclick="toggleStatus('${a.id}', 'fav', ${!a.fav})" class="badge-icon !w-10 !h-10 text-xl ${a.fav ? 'bg-orange-100 ring-2 ring-orange-500' : ''}">❤️</button>
+                             <button onclick="toggleStatus('${a.id}', 'provar', ${!a.provar})" class="badge-icon !w-10 !h-10 text-xl ${a.provar ? 'bg-orange-100 ring-2 ring-orange-500' : ''}">👀</button>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <input type="text" id="e-nom" value="${a.nom}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
+                        <textarea id="e-ingredients" placeholder="Ingredients..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-32">${a.ingredients || ''}</textarea>
+                        <textarea id="e-preparacio" placeholder="Pasos..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-40">${a.preparacio || ''}</textarea>
+                        <input type="url" id="e-link" value="${a.link || ''}" placeholder="Link..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none text-blue-500">
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button onclick="updateAliment('${id}')" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black">DESAR</button>
+                        <button onclick="deleteAliment('${id}')" class="px-6 bg-red-50 text-red-500 rounded-2xl font-black">🗑️</button>
+                    </div>
+                    <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
+                </div>
+            `);
+        };
+
+        window.toggleStatus = function(id, field, val) {
+            db.ref('aliments/' + id).update({ [field]: val }).then(() => {
+                openEditAliment(id);
+            });
+        };
+
+        window.openCreateAliment = function() {
+            showModal(`
+                <div class="p-8 space-y-6">
+                    <h3 class="text-xl font-black text-slate-800">Nova Recepta</h3>
+                    <div class="space-y-4">
+                        <input type="text" id="m-nom" placeholder="Nom del plat..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
+                        <textarea id="m-ingredients" placeholder="Ingredients..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none"></textarea>
+                        <textarea id="m-preparacio" placeholder="Passos..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none"></textarea>
+                        <input type="url" id="m-link" placeholder="Link extern" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
+                    </div>
+                    <button onclick="saveNewAliment()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black shadow-lg">CREAR</button>
+                    <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Cancel·lar</button>
+                </div>
+            `);
+        };
+
+        window.saveNewAliment = function() {
+            const nom = document.getElementById('m-nom')?.value;
+            if(!nom) return;
+            db.ref('aliments').push({ 
+                nom, 
+                ingredients: document.getElementById('m-ingredients')?.value || "",
+                preparacio: document.getElementById('m-preparacio')?.value || "",
+                link: document.getElementById('m-link')?.value || "", 
+                fav: false, 
+                provar: false 
+            }).then(closeModal);
+        };
+
+        window.updateAliment = function(id) {
+            db.ref('aliments/' + id).update({
+                nom: document.getElementById('e-nom')?.value,
+                ingredients: document.getElementById('e-ingredients')?.value || "",
+                preparacio: document.getElementById('e-preparacio')?.value || "",
+                link: document.getElementById('e-link')?.value || ""
+            }).then(closeModal);
+        };
+
+        window.deleteAliment = function(id) {
+            if(confirm("Eliminar recepta?")) db.ref('aliments/' + id).remove().then(closeModal);
+        };
+
+        function showModal(html) {
+            const cont = document.getElementById('modal-container');
+            if (cont) {
+                document.getElementById('modal-content').innerHTML = html;
+                cont.classList.remove('hidden');
+                document.getElementById('modal-content').scrollTop = 0;
+            }
+        }
+
+        window.closeModal = () => document.getElementById('modal-container')?.classList.add('hidden');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+            document.getElementById('btn-prev').onclick = () => { offset--; render(); };
+            document.getElementById('btn-next').onclick = () => { offset++; render(); };
+            document.getElementById('search-input').oninput = render;
+            document.getElementById('modal-container').onclick = (e) => { if(e.target.id === 'modal-container') closeModal(); };
+        });
     </script>
 </body>
 </html>
