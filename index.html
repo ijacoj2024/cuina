@@ -18,6 +18,7 @@
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background-color: #f8fafc; 
             padding-bottom: 100px;
+            scroll-behavior: smooth;
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -28,9 +29,10 @@
             color: white;
             border-radius: 1.5rem;
             border: 1px solid #334155;
-            min-height: 320px;
+            min-height: 280px;
             display: flex;
             flex-direction: column;
+            transition: transform 0.2s;
         }
 
         .mobile-card {
@@ -76,11 +78,6 @@
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
-        textarea {
-            resize: none;
-            min-height: 80px;
-        }
-
         .badge-icon {
             display: inline-flex;
             align-items: center;
@@ -114,13 +111,13 @@
             </div>
         </header>
 
-        <!-- Calendari ràpid -->
+        <!-- Calendari ràpid (Mòbil: Vertical | Desktop: Grid) -->
         <section id="calendar-section" class="mb-8">
-            <div id="calendar-grid" class="flex md:grid md:grid-cols-7 gap-4 overflow-x-auto snap-x no-scrollbar pb-4"></div>
+            <div id="calendar-grid" class="flex flex-col md:grid md:grid-cols-7 gap-4"></div>
         </section>
 
         <!-- Filtres -->
-        <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6">
+        <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6 sticky top-2 z-30 bg-slate-50/80 backdrop-blur-md py-2">
             <button onclick="setTab('favs')" id="btn-favs" class="px-5 py-3 rounded-2xl bg-white border font-bold text-sm whitespace-nowrap shadow-sm">❤️ Preferits</button>
             <button onclick="setTab('probant')" id="btn-probant" class="px-5 py-3 rounded-2xl bg-white border font-bold text-sm whitespace-nowrap shadow-sm">👀 Per provar</button>
             <button onclick="setTab('all')" id="btn-all" class="active-tab px-5 py-3 rounded-2xl bg-white border font-bold text-sm whitespace-nowrap shadow-sm">📂 Tots</button>
@@ -129,16 +126,13 @@
 
         <!-- Contingut Dinàmic -->
         <div id="dynamic-content">
-            <!-- Cercador (només visible en pestanyes de receptes) -->
             <div id="search-container" class="relative mb-6">
                 <input type="text" id="search-input" placeholder="Cerca una recepta al teu llibre..." class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-orange-500 font-bold outline-none">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl">🔍</span>
             </div>
 
-            <!-- Llista principal -->
             <div id="main-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
 
-            <!-- Secció Especial de Caducitat (oculta per defecte) -->
             <div id="caducitat-section" class="hidden space-y-6">
                 <div class="bg-orange-50 p-6 rounded-[2rem] border border-orange-100">
                     <h2 class="font-black text-lg text-orange-800 mb-4 tracking-tight uppercase text-xs">Afegir producte que caduca</h2>
@@ -153,7 +147,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="px-2">
                     <h3 class="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-4">Llista d'avisos actius</h3>
                     <div id="cad-tab-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
@@ -163,7 +156,7 @@
     </div>
 
     <!-- Botó flotant -->
-    <button onclick="openCreateAliment()" class="fixed bottom-24 right-6 w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center text-white text-3xl shadow-lg z-40 active:scale-90 transition-transform">＋</button>
+    <button onclick="openCreateAliment()" class="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center text-white text-3xl shadow-lg z-40 active:scale-90 transition-transform">＋</button>
 
     <!-- Modal -->
     <div id="modal-container" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -180,6 +173,7 @@
         let allAliments = [];
         let allSelections = {};
         let allCaducitats = {};
+        let initialScrollDone = false;
 
         const mesos = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
         const diesSetmana = ["Diumenge", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte"];
@@ -222,6 +216,19 @@
             renderCalendar();
             renderTabContent();
             updateUIState();
+            
+            // Scroll al dia actual només la primera vegada que hi ha dades
+            if (!initialScrollDone && Object.keys(allSelections).length > 0) {
+                setTimeout(scrollToToday, 500);
+                initialScrollDone = true;
+            }
+        }
+
+        function scrollToToday() {
+            const todayCard = document.querySelector('.today-card');
+            if (todayCard) {
+                todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
 
         function renderHeader() {
@@ -263,15 +270,18 @@
                 });
 
                 const col = document.createElement('div');
-                col.className = "min-w-[85vw] md:min-w-0 snap-center";
+                col.className = `w-full ${esHoy ? 'today-card' : ''}`;
                 col.innerHTML = `
-                    <div class="day-card-dark p-5 ${esHoy ? 'ring-4 ring-orange-500/30 border-orange-500' : ''}">
-                        <div class="mb-4">
-                            <p class="text-[10px] font-black uppercase text-orange-400 tracking-widest">${nomDia}</p>
-                            <h3 class="text-xl font-black leading-tight">${curr.getDate()} <span class="text-slate-400 text-sm font-bold">de ${nomMes}</span></h3>
-                            ${alertaCaducitat}
+                    <div class="day-card-dark p-5 ${esHoy ? 'ring-4 ring-orange-500/40 border-orange-500 shadow-xl' : ''}">
+                        <div class="mb-4 flex justify-between items-start">
+                            <div>
+                                <p class="text-[10px] font-black uppercase text-orange-400 tracking-widest">${nomDia}</p>
+                                <h3 class="text-xl font-black leading-tight">${curr.getDate()} <span class="text-slate-400 text-sm font-bold">de ${nomMes}</span></h3>
+                            </div>
+                            ${esHoy ? '<span class="bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-full">AVUI</span>' : ''}
                         </div>
-                        <div class="space-y-6 flex-grow">
+                        ${alertaCaducitat}
+                        <div class="space-y-6 flex-grow mt-2">
                             <div>
                                 <div class="flex justify-between items-center mb-2">
                                     <span class="text-xs font-black text-slate-400 flex items-center gap-1">☀️ DINAR</span>
@@ -295,7 +305,7 @@
 
         function renderPlats(fecha, tipo) {
             const plats = (allSelections[fecha] && allSelections[fecha][tipo]) ? allSelections[fecha][tipo] : [];
-            if (!Array.isArray(plats) || plats.length === 0) return '<p class="text-[10px] italic text-slate-600 px-1">Buit</p>';
+            if (!Array.isArray(plats) || plats.length === 0) return '<p class="text-[10px] italic text-slate-600 px-1">Cap plat assignat</p>';
             return plats.map((n, idx) => `
                 <div class="flex justify-between items-start bg-slate-800/80 border border-slate-700 p-2.5 rounded-xl text-[11px] font-bold">
                     <span class="break-words leading-tight pr-2">${n}</span>
@@ -355,8 +365,6 @@
                 grid.appendChild(card);
             });
         }
-
-        // --- Gestió Caducitats a la Pestanya ---
 
         function renderCaducitatTabList() {
             const list = document.getElementById('cad-tab-list');
@@ -427,8 +435,6 @@
             if(confirm("Eliminar avís?")) db.ref('aliments_caducitat/' + key).remove();
         };
 
-        // --- Modals i Altres ---
-
         window.openSelector = function(fecha, tipo) {
             const tText = tipo === 'comida' ? 'Dinar' : 'Sopar';
             showModal(`
@@ -480,7 +486,7 @@
             showModal(`
                 <div class="p-8 space-y-6">
                     <div class="flex justify-between items-start">
-                        <h3 class="text-xl font-black text-slate-800">Detalls de la Recepta</h3>
+                        <h3 class="text-xl font-black text-slate-800">Detalls</h3>
                         <div class="flex gap-2">
                              <button onclick="toggleStatus('${a.id}', 'fav', ${!a.fav})" class="badge-icon !w-10 !h-10 text-xl ${a.fav ? 'bg-orange-100 ring-2 ring-orange-500' : ''}">❤️</button>
                              <button onclick="toggleStatus('${a.id}', 'provar', ${!a.provar})" class="badge-icon !w-10 !h-10 text-xl ${a.provar ? 'bg-orange-100 ring-2 ring-orange-500' : ''}">👀</button>
@@ -489,8 +495,8 @@
                     <div class="space-y-4">
                         <input type="text" id="e-nom" value="${a.nom}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
                         <textarea id="e-ingredients" placeholder="Ingredients..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-32">${a.ingredients || ''}</textarea>
-                        <textarea id="e-preparacio" placeholder="Pasos..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-40">${a.preparacio || ''}</textarea>
-                        <input type="url" id="e-link" value="${a.link || ''}" placeholder="Link..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none text-blue-500">
+                        <textarea id="e-preparacio" placeholder="Passos..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-40">${a.preparacio || ''}</textarea>
+                        <input type="url" id="e-link" value="${a.link || ''}" placeholder="Enllaç extern" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none text-blue-500">
                     </div>
                     <div class="flex gap-2 pt-4">
                         <button onclick="updateAliment('${id}')" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black">DESAR</button>
@@ -514,7 +520,7 @@
                     <div class="space-y-4">
                         <input type="text" id="m-nom" placeholder="Nom del plat..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
                         <textarea id="m-ingredients" placeholder="Ingredients..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none"></textarea>
-                        <textarea id="m-preparacio" placeholder="Passos..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none"></textarea>
+                        <textarea id="m-preparacio" placeholder="Com es fa?..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none"></textarea>
                         <input type="url" id="m-link" placeholder="Link extern" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
                     </div>
                     <button onclick="saveNewAliment()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black shadow-lg">CREAR</button>
@@ -546,7 +552,7 @@
         };
 
         window.deleteAliment = function(id) {
-            if(confirm("Eliminar recepta?")) db.ref('aliments/' + id).remove().then(closeModal);
+            if(confirm("Vols eliminar aquesta recepta?")) db.ref('aliments/' + id).remove().then(closeModal);
         };
 
         function showModal(html) {
