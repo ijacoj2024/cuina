@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Cuina Intel·ligent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #f8fafc; 
+            min-height: 100vh;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Targetes dels dies: Color fosc i lletres blanques */
+        .day-card { 
+            min-height: 350px; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: #1e293b; 
+            border: 1px solid #334155;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .day-card.today {
+            background-color: #0f172a;
+            ring: 4px;
+            ring-color: #f59e0b; 
+            border-color: #f59e0b;
+        }
+
+        .text-accent { color: #f59e0b; } 
+        .bg-accent { background-color: #f59e0b; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="app-root" class="max-w-7xl mx-auto relative">
+        <!-- Capçalera -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-4xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    La Meva Cuina <span class="text-orange-500">🥘</span>
+                </h1>
+                <p id="conn-info" class="text-slate-500 text-sm italic font-medium">Sincronitzant dades...</p>
+            </div>
+            
+            <!-- Navegació Setmanal -->
+            <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+                <button id="btn-prev" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-all text-slate-600 font-bold">〈</button>
+                <span id="rango-fechas" class="px-4 font-bold text-slate-700 min-w-[140px] text-center">Carregant...</span>
+                <button id="btn-next" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-all text-slate-600 font-bold">〉</button>
+            </div>
+        </header>
+
+        <!-- Grid Principal (Calendari de 7 dies) -->
+        <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-7 gap-4 mb-10">
+            <!-- Es genera per JS -->
+        </div>
+
+        <!-- Secció Inferior -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 border-t border-slate-200 pt-10">
+            <div class="lg:col-span-2">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        📖 Receptari Personal
+                        <span id="count-aliments" class="text-xs bg-slate-200 text-slate-600 px-3 py-1 rounded-full font-bold">0</span>
+                    </h2>
+                </div>
+                <div id="grid-aliments" class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-h-[450px] overflow-y-auto custom-scroll pr-2">
+                    <!-- Es genera per JS -->
+                </div>
+            </div>
+            
+            <div class="bg-slate-800 rounded-[3rem] p-8 text-white shadow-xl h-fit">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-orange-400">📊 Estat del Sistema</h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                    Les etiquetes dels dies tenen el mode fosc per millorar el contrast. Ara el text blanc destaca sobre el fons fosc per a una lectura òptima.
+                </p>
+                <div class="mt-8 pt-6 border-t border-slate-700">
+                    <div class="flex items-center gap-3 bg-slate-900/50 p-3 rounded-2xl">
+                        <div id="status-dot" class="w-3 h-3 rounded-full bg-orange-500 animate-pulse"></div>
+                        <span id="status-text" class="text-sm font-bold">Connectant...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal per triar plat -->
+    <div id="modal-receptes" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800 text-lg">Afegir a <span id="modal-dia-label" class="text-orange-500">...</span></h3>
+                <button id="btn-close-modal" class="bg-slate-200 hover:bg-slate-300 w-10 h-10 rounded-full flex items-center justify-center text-slate-600">×</button>
+            </div>
+            <div class="p-6">
+                <input type="text" id="search-recipe" placeholder="🔍 Cerca una recepta..." class="w-full p-4 border-2 border-slate-100 rounded-2xl focus:border-orange-500 focus:outline-none mb-4 bg-slate-50">
+                <div id="llista-modal" class="max-h-[300px] overflow-y-auto custom-scroll space-y-2 pr-1">
+                    <!-- JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const config = { databaseURL: "https://calendari-menjars-default-rtdb.europe-west1.firebasedatabase.app" };
+            
+            if (!firebase.apps.length) { firebase.initializeApp(config); }
+            const db = firebase.database();
+
+            let offset = 0, selFecha = "", selTipo = "", allAliments = [], allSelections = {}, allCaducitats = {};
+
+            const toISO = (d) => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+            const toDM = (d) => d.getDate() + "/" + (d.getMonth()+1);
+
+            document.getElementById('btn-prev').onclick = () => { offset--; render(); };
+            document.getElementById('btn-next').onclick = () => { offset++; render(); };
+            document.getElementById('btn-close-modal').onclick = () => document.getElementById('modal-receptes').classList.add('hidden');
+            document.getElementById('search-recipe').onkeyup = filterRecipes;
+
+            window.openWpModal = (f, t) => {
+                selFecha = f; selTipo = t;
+                document.getElementById('modal-dia-label').innerText = t === 'comida' ? 'Dinar' : 'Sopar';
+                document.getElementById('modal-receptes').classList.remove('hidden');
+                document.getElementById('search-recipe').value = "";
+                filterRecipes();
+            };
+
+            window.addPlat = (nom) => {
+                let plats = Array.isArray(allSelections[selFecha]?.[selTipo]) ? [...allSelections[selFecha][selTipo]] : [];
+                plats.push(nom);
+                db.ref('seleccions/' + selFecha + '/' + selTipo).set(plats).then(() => {
+                    document.getElementById('modal-receptes').classList.add('hidden');
+                });
+            };
+
+            window.delPlat = (f, t, i) => {
+                let plats = [...(allSelections[f][t] || [])];
+                plats.splice(i, 1);
+                db.ref('seleccions/' + f + '/' + t).set(plats);
+            };
+
+            window.delCaducitat = (key) => {
+                if(confirm("Vols eliminar aquest avís?")) db.ref('aliments_caducitat/' + key).remove();
+            };
+
+            function filterRecipes() {
+                const txt = (document.getElementById('search-recipe').value || "").toLowerCase();
+                const box = document.getElementById('llista-modal');
+                box.innerHTML = "";
+                allAliments.filter(a => ((a && a.nom) || "").toString().toLowerCase().includes(txt)).forEach(a => {
+                    const item = document.createElement('div');
+                    item.className = "flex justify-between items-center p-4 hover:bg-orange-50 rounded-2xl cursor-pointer transition-all border border-slate-100 hover:border-orange-200 group";
+                    item.onclick = () => window.addPlat(a.nom);
+                    item.innerHTML = `<span class="text-slate-700 font-bold">${a.nom}</span><span class="text-orange-500 font-bold">＋</span>`;
+                    box.appendChild(item);
+                });
+            }
+
+            function render() {
+                const hoy = new Date(); hoy.setHours(0,0,0,0);
+                const d = new Date();
+                const day = d.getDay(), diff = d.getDate() - (day == 0 ? 6 : day - 1);
+                const lunes = new Date(d.setDate(diff + (offset * 7))); lunes.setHours(0,0,0,0);
+                const dom = new Date(lunes); dom.setDate(lunes.getDate() + 6);
+                
+                document.getElementById('rango-fechas').innerText = toDM(lunes) + " - " + toDM(dom);
+                const diesNames = ["Dll", "Dmt", "Dmc", "Djs", "Dvn", "Dsb", "Dmg"];
+                const grid = document.getElementById('calendar-grid');
+                grid.innerHTML = "";
+
+                for (let i = 0; i < 7; i++) {
+                    const curr = new Date(lunes); curr.setDate(lunes.getDate() + i);
+                    const iso = toISO(curr);
+                    const esHoy = curr.toDateString() === hoy.toDateString();
+
+                    let cadHtml = "";
+                    Object.keys(allCaducitats).forEach(key => {
+                        if (allCaducitats[key].caducitat === iso) {
+                            cadHtml += `<div class="mt-2 p-2 bg-orange-500 text-white rounded-xl text-[10px] font-black relative group shadow-lg">
+                                ⚠️ ${allCaducitats[key].nom}
+                                <button onclick="window.delCaducitat('${key}')" class="absolute -top-1 -right-1 bg-white text-orange-600 rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-md">×</button>
+                            </div>`;
+                        }
+                    });
+
+                    const card = document.createElement('div');
+                    card.className = `day-card p-5 rounded-[2rem] ${esHoy ? 'today ring-4 ring-orange-500/20' : ''}`;
+                    
+                    let inner = `<div class="text-center mb-6">
+                        <p class="text-[10px] font-bold uppercase tracking-widest ${esHoy ? 'text-orange-400' : 'text-slate-400'}">${diesNames[i]}</p>
+                        <p class="text-4xl font-black text-white">${curr.getDate()}</p>
+                        ${cadHtml}
+                    </div>`;
+
+                    ["comida", "cena"].forEach(t => {
+                        const icon = t === 'comida' ? '☀️' : '🌙';
+                        const tNom = t === 'comida' ? 'Dinar' : 'Sopar';
+                        const plats = allSelections[iso]?.[t] || [];
+                        let pList = plats.map((n, idx) => `
+                            <div class="flex justify-between items-center bg-slate-700/50 border border-slate-600 p-2 rounded-xl mb-1 text-[11px] text-white">
+                                <span class="font-medium truncate mr-1">${n}</span>
+                                <button onclick="window.delPlat('${iso}','${t}',${idx})" class="text-slate-400 hover:text-white">×</button>
+                            </div>
+                        `).join('');
+
+                        inner += `<div class="mb-5 last:mb-0">
+                            <p class="text-[9px] font-black text-slate-400 uppercase mb-2 flex items-center justify-center gap-1">${icon} ${tNom}</p>
+                            <div class="space-y-1">${pList}</div>
+                            <button onclick="window.openWpModal('${iso}','${t}')" class="w-full py-2 text-[10px] font-bold text-slate-300 border border-dashed border-slate-600 rounded-xl hover:bg-slate-700 hover:text-white transition-all mt-2">+ Afegir</button>
+                        </div>`;
+                    });
+
+                    card.innerHTML = inner;
+                    grid.appendChild(card);
+                }
+                renderAliments();
+            }
+
+            function renderAliments() {
+                const box = document.getElementById('grid-aliments');
+                box.innerHTML = "";
+                document.getElementById('count-aliments').innerText = allAliments.length;
+                allAliments.forEach(a => {
+                    box.innerHTML += `<div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-3 hover:border-orange-300 transition-all shadow-sm">
+                        <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center font-black">${a.nom ? a.nom.charAt(0).toUpperCase() : '?'}</div>
+                        <span class="text-sm font-bold text-slate-700 leading-tight">${a.nom}</span>
+                    </div>`;
+                });
+            }
+
+            db.ref('aliments').on('value', s => {
+                const v = s.val(); allAliments = [];
+                if(v) Object.values(v).forEach(i => i && allAliments.push(typeof i === 'string' ? {nom: i} : i));
+                allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || ""));
+                render();
+            });
+            db.ref('seleccions').on('value', s => { allSelections = s.val() || {}; render(); });
+            db.ref('aliments_caducitat').on('value', s => { 
+                allCaducitats = s.val() || {}; 
+                const dot = document.getElementById('status-dot');
+                if (dot) {
+                    dot.classList.replace('bg-orange-500', 'bg-emerald-500');
+                    dot.classList.remove('animate-pulse');
+                    document.getElementById('status-text').innerText = "Sincronitzat";
+                }
+                render(); 
+            });
+        });
+    </script>
+</body>
+</html>
