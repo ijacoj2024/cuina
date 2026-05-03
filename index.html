@@ -109,6 +109,10 @@
             border: 3px solid var(--primary);
             box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.3);
         }
+
+        input, textarea {
+            transition: all 0.2s ease;
+        }
     </style>
 </head>
 <body class="text-slate-900">
@@ -190,7 +194,6 @@
             db.ref('seleccions').on('value', s => { 
                 allSelections = s.val() || {}; 
                 render(); 
-                // Provocar el scroll un cop tenim dades de seleccions (que indica que la càrrega va avançada)
                 if (!initialScrollDone) scrollToToday();
             });
 
@@ -200,13 +203,9 @@
             });
         }
 
-        // Funció per anar directament al dia d'avui
         function scrollToToday() {
             if (initialScrollDone) return;
-            
-            // Forçarem el render del calendari abans de buscar l'element
             renderCalendar();
-            
             setTimeout(() => {
                 const todayCard = document.querySelector('.today-card');
                 if (todayCard) {
@@ -363,8 +362,9 @@
                 div.onclick = () => openEditAliment(a.id);
                 div.innerHTML = `
                     <div class="text-[13px] font-black text-slate-700 leading-tight">${a.nom}</div>
-                    <div class="mt-2 flex gap-1">
+                    <div class="mt-2 flex items-center gap-2">
                         ${a.fav ? '<span class="text-[10px]">❤️</span>' : ''}
+                        ${a.link ? '<span class="text-[10px] text-orange-500 font-bold">🔗</span>' : ''}
                     </div>
                 `;
                 grid.appendChild(div);
@@ -372,9 +372,9 @@
         }
 
         window.exportAlimentsCSV = function() {
-            let csv = "Nom,Ingredients,Preferit\n";
+            let csv = "Nom,Ingredients,Pas a Pas,Enllac,Preferit\n";
             allAliments.forEach(a => {
-                csv += `"${a.nom || ""}","${(a.ingredients || '').replace(/"/g, '""')}",${a.fav ? "Sí" : "No"}\n`;
+                csv += `"${a.nom || ""}","${(a.ingredients || '').replace(/"/g, '""')}","${(a.metode || '').replace(/"/g, '""')}","${a.link || ""}",${a.fav ? "Sí" : "No"}\n`;
             });
             downloadCSV(csv, "aliments.csv");
         };
@@ -444,19 +444,42 @@
                 <div class="p-8 space-y-6">
                     <h3 class="text-xl font-black">Nova Recepta</h3>
                     <input type="text" id="m-nom" placeholder="Nom del plat..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
-                    <textarea id="m-ingredients" placeholder="Ingredients..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-24"></textarea>
-                    <button onclick="saveNewAliment()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black">CREAR</button>
+                    
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Ingredients</label>
+                        <textarea id="m-ingredients" placeholder="Llista d'ingredients..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-24 mt-1"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Com es fa?</label>
+                        <textarea id="m-metode" placeholder="Pas a pas de la preparació..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-32 mt-1"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Enllaç (URL)</label>
+                        <input type="url" id="m-link" placeholder="https://..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none mt-1">
+                    </div>
+
+                    <button onclick="saveNewAliment()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-100">CREAR RECEPTA</button>
                     <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
                 </div>
             `);
         };
 
         window.saveNewAliment = () => {
-            const nomEl = document.getElementById('m-nom');
-            const ingEl = document.getElementById('m-ingredients');
-            const nom = nomEl ? nomEl.value : "";
+            const nom = document.getElementById('m-nom')?.value;
+            const ingredients = document.getElementById('m-ingredients')?.value || "";
+            const metode = document.getElementById('m-metode')?.value || "";
+            const link = document.getElementById('m-link')?.value || "";
+            
             if(!nom) return;
-            db.ref('aliments').push({ nom, ingredients: (ingEl ? ingEl.value : "") || "", fav: false }).then(closeModal);
+            db.ref('aliments').push({ 
+                nom, 
+                ingredients, 
+                metode, 
+                link, 
+                fav: false 
+            }).then(closeModal);
         };
 
         window.openEditAliment = (id) => {
@@ -466,11 +489,31 @@
                 <div class="p-8 space-y-6">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xl font-black">${a.nom}</h3>
-                        <button onclick="toggleFav('${a.id}', ${!a.fav})" class="text-2xl">${a.fav ? '❤️' : '🤍'}</button>
+                        <div class="flex gap-3">
+                            ${a.link ? `<a href="${a.link}" target="_blank" class="bg-orange-100 text-orange-600 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1">🌐 Web</a>` : ''}
+                            <button onclick="toggleFav('${a.id}', ${!a.fav})" class="text-2xl">${a.fav ? '❤️' : '🤍'}</button>
+                        </div>
                     </div>
-                    <textarea id="e-ingredients" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-32">${a.ingredients || ''}</textarea>
-                    <div class="flex gap-2">
-                        <button onclick="updateAliment('${id}')" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black">DESAR</button>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Ingredients</label>
+                            <textarea id="e-ingredients" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-24 mt-1">${a.ingredients || ''}</textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Com es fa?</label>
+                            <textarea id="e-metode" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-32 mt-1">${a.metode || ''}</textarea>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Enllaç (URL)</label>
+                            <input type="url" id="e-link" value="${a.link || ''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none mt-1">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-4">
+                        <button onclick="updateAliment('${id}')" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black">DESAR CANVIS</button>
                         <button onclick="deleteAliment('${id}')" class="px-6 bg-red-50 text-red-500 rounded-2xl font-black">🗑️</button>
                     </div>
                     <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
@@ -479,11 +522,20 @@
         };
 
         window.toggleFav = (id, val) => db.ref('aliments/' + id).update({ fav: val }).then(closeModal);
+        
         window.updateAliment = (id) => {
-            const el = document.getElementById('e-ingredients');
-            db.ref('aliments/' + id).update({ ingredients: el ? el.value : "" }).then(closeModal);
+            const ingredients = document.getElementById('e-ingredients')?.value || "";
+            const metode = document.getElementById('e-metode')?.value || "";
+            const link = document.getElementById('e-link')?.value || "";
+            
+            db.ref('aliments/' + id).update({ 
+                ingredients, 
+                metode, 
+                link 
+            }).then(closeModal);
         };
-        window.deleteAliment = (id) => confirm("Eliminar?") && db.ref('aliments/' + id).remove().then(closeModal);
+
+        window.deleteAliment = (id) => confirm("Vols eliminar aquesta recepta?") && db.ref('aliments/' + id).remove().then(closeModal);
 
         function showModal(html) {
             const content = document.getElementById('modal-content');
