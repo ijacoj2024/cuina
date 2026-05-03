@@ -11,158 +11,150 @@
         :root {
             --primary: #f59e0b;
             --dark-card: #1e293b;
-            --dark-bg: #0f172a;
         }
 
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background-color: #f8fafc; 
             padding-bottom: 120px;
-            scroll-behavior: smooth;
         }
 
         .day-card-dark {
             background-color: var(--dark-card);
             color: white;
-            border-radius: 2.5rem;
-            padding: 2rem 1.5rem;
+            border-radius: 2rem;
+            padding: 1.5rem;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            transition: transform 0.3s ease;
         }
 
         .btn-add-dashed {
             width: 100%;
             border: 1px dashed rgba(255,255,255,0.3);
             border-radius: 1rem;
-            padding: 12px;
+            padding: 10px;
             color: rgba(255,255,255,0.6);
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             margin-top: 8px;
-            transition: all 0.2s;
-        }
-        .btn-add-dashed:active {
-            background: rgba(255,255,255,0.05);
-            transform: scale(0.98);
         }
 
         .item-row {
             background: rgba(255,255,255,0.08);
-            border-radius: 1rem;
-            padding: 12px 16px;
+            border-radius: 0.75rem;
+            padding: 10px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             border-left: 3px solid var(--primary);
         }
 
         .section-label {
             font-size: 10px;
             font-weight: 800;
-            letter-spacing: 0.1em;
             color: var(--primary);
             text-transform: uppercase;
+            margin-bottom: 8px;
             display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 12px;
+            gap: 4px;
         }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         .active-tab {
             background-color: var(--primary) !important;
             color: white !important;
         }
 
-        .export-area {
-            background: white;
-            border-radius: 2rem;
-            padding: 1.5rem;
-            box-shadow: 0 -10px 25px -5px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
-            margin-top: 1rem;
-        }
-
         .caducitat-alert {
             background-color: #fee2e2;
-            border: 1px solid #fecaca;
             color: #b91c1c;
-            border-radius: 1rem;
-            padding: 10px;
+            border-radius: 0.75rem;
+            padding: 8px;
             font-size: 11px;
             font-weight: 700;
-            margin-top: 10px;
+            margin-top: 8px;
             width: 100%;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
         
         .today-card {
             border: 3px solid var(--primary);
-            box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.3);
         }
 
-        input, textarea {
-            transition: all 0.2s ease;
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #334155;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1000;
+            display: none;
         }
     </style>
 </head>
 <body class="text-slate-900">
 
-    <div id="app-root" class="max-w-md mx-auto md:max-w-4xl px-4 py-6">
+    <div id="toast" class="toast">Acció realitzada correctament</div>
+
+    <div id="app-root" class="max-w-md mx-auto px-4 py-6">
         
         <header class="flex flex-col gap-4 mb-8 text-center">
             <h1 class="text-2xl font-extrabold tracking-tight">El meu <span class="text-orange-500">Menú</span></h1>
-            
-            <div class="flex items-center justify-center gap-4 bg-white p-2 rounded-2xl shadow-sm border mt-2">
-                <button id="btn-prev" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 font-bold">‹</button>
-                <span id="rango-fechas" class="text-sm font-black text-slate-700 min-w-[140px] text-center">...</span>
-                <button id="btn-next" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 font-bold">〉</button>
+            <div class="flex items-center justify-center gap-4 bg-white p-2 rounded-2xl shadow-sm border">
+                <button onclick="changeWeek(-1)" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 font-bold">‹</button>
+                <span id="rango-fechas" class="text-sm font-black text-slate-700 min-w-[140px]">...</span>
+                <button onclick="changeWeek(1)" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 font-bold">〉</button>
             </div>
         </header>
 
-        <section id="calendar-section" class="space-y-6 mb-12">
-            <div id="calendar-grid" class="flex flex-col gap-6"></div>
-        </section>
+        <div id="calendar-grid" class="flex flex-col gap-6 mb-12"></div>
 
         <div id="dynamic-content" class="mb-12 hidden">
-            <div id="export-tab-content" class="hidden export-area space-y-4">
-                <h3 class="font-bold text-sm text-slate-800">Exportar dades a CSV</h3>
-                <button onclick="exportAlimentsCSV()" class="w-full py-4 bg-slate-100 rounded-2xl font-bold text-xs text-slate-600 active:scale-95 transition-all">📥 Exportar Llista d'Aliments</button>
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Menú per mes:</label>
-                    <div class="flex gap-2">
-                        <input type="month" id="export-month" class="flex-1 p-4 bg-slate-50 rounded-2xl text-xs font-bold border-none ring-1 ring-slate-200 outline-none focus:ring-orange-500">
-                        <button onclick="exportMenuCSV()" class="bg-orange-500 text-white px-6 rounded-2xl font-bold text-xs whitespace-nowrap active:scale-95 transition-all">Exportar</button>
-                    </div>
-                </div>
+            <!-- Cercador (Pestanyes de Receptes i Favorits) -->
+            <div id="list-tab-content" class="hidden">
+                <input type="text" id="search-input" placeholder="Cerca receptes..." class="w-full p-4 bg-white rounded-2xl border shadow-sm mb-4 font-bold outline-none focus:ring-2 focus:ring-orange-500">
+                <div id="main-grid" class="grid grid-cols-2 gap-3"></div>
             </div>
 
-            <div id="list-tab-content" class="hidden">
-                <input type="text" id="search-input" placeholder="Cerca receptes..." class="w-full p-4 bg-white rounded-2xl border-none shadow-sm mb-4 font-bold outline-none ring-1 ring-slate-100 focus:ring-orange-500">
-                <div id="main-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+            <!-- Caducitats -->
+            <div id="caducitat-tab-content" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-100">
+                    <h3 class="font-black text-xs text-slate-400 uppercase mb-4">Nova Caducitat</h3>
+                    <input type="text" id="cad-nom" placeholder="Què caduca?" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border mb-2 outline-none">
+                    <div class="flex gap-2">
+                        <input type="date" id="cad-data" class="flex-1 p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
+                        <button onclick="saveCaducitat()" class="bg-orange-500 text-white px-6 rounded-2xl font-black text-xs">DESAR</button>
+                    </div>
+                </div>
+                <div id="cad-list-grid" class="space-y-3"></div>
+            </div>
+
+            <!-- Exportar -->
+            <div id="export-tab-content" class="hidden bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
+                <h3 class="font-bold text-sm uppercase">Dades</h3>
+                <button onclick="exportCSV()" class="w-full py-4 bg-slate-50 rounded-2xl font-bold text-xs">Descarregar Receptes (CSV)</button>
             </div>
         </div>
 
+        <!-- Menu Inferior -->
         <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t p-4 flex justify-around items-center z-50">
-            <button onclick="setTab('all')" id="btn-all" class="p-3 rounded-2xl transition-all">📂</button>
-            <button onclick="setTab('favs')" id="btn-favs" class="p-3 rounded-2xl transition-all">❤️</button>
-            <button onclick="openCreateAliment()" class="bg-orange-500 text-white w-12 h-12 rounded-2xl shadow-lg shadow-orange-200 flex items-center justify-center text-xl">＋</button>
-            <button onclick="setTab('caducitat')" id="btn-caducitat" class="p-3 rounded-2xl transition-all">⌛</button>
-            <button onclick="setTab('export')" id="btn-export" class="p-3 rounded-2xl transition-all">📊</button>
+            <button onclick="setTab('all')" id="btn-all" class="p-3 text-xl rounded-2xl transition-all">📂</button>
+            <button onclick="setTab('favs')" id="btn-favs" class="p-3 text-xl rounded-2xl transition-all">❤️</button>
+            <button onclick="openCreateAliment()" class="bg-orange-500 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center text-xl">＋</button>
+            <button onclick="setTab('caducitat')" id="btn-caducitat" class="p-3 text-xl rounded-2xl transition-all">⌛</button>
+            <button onclick="setTab('export')" id="btn-export" class="p-3 text-xl rounded-2xl transition-all">📊</button>
         </div>
     </div>
 
     <div id="modal-container" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-        <div id="modal-content" class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh] no-scrollbar"></div>
+        <div id="modal-content" class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-y-auto max-h-[90vh]"></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -171,14 +163,106 @@
     <script>
         let db;
         let offset = 0;
-        let activeTab = 'none'; 
+        let activeTab = 'none';
         let allAliments = [];
         let allSelections = {};
         let allCaducitats = {};
-        let initialScrollDone = false;
 
-        const diesSetmana = ["DIUMENGE", "DILLUNS", "DIMARTS", "DIMECRES", "DIJOUS", "DIVENDRES", "DISSABTE"];
-        const nomsMesos = ["GENER", "FEBRER", "MARÇ", "ABRIL", "MAIG", "JUNY", "JULIOL", "AGOST", "SETEMBRE", "OCTUBRE", "NOVEMBRE", "DESEMBRE"];
+        // --- DEFINICIÓ DE FUNCIONS GLOBALS PRIMER ---
+
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            if(!t) return;
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2000);
+        }
+
+        window.deleteCaducitat = (id) => {
+            if (!confirm("Vols eliminar aquest avís de caducitat?")) return;
+            db.ref('aliments_caducitat').child(id).remove()
+                .then(() => window.showToast("Caducitat eliminada"))
+                .catch(err => alert("Error: " + err.message));
+        };
+
+        window.deleteRecepta = (id) => {
+            if (!confirm("Vols eliminar aquesta recepta de la base de dades?")) return;
+            db.ref('aliments').child(id).remove()
+                .then(() => {
+                    closeModal();
+                    window.showToast("Recepta eliminada");
+                })
+                .catch(err => alert("Error al esborrar: " + err.message));
+        };
+
+        window.updateRecepta = (id) => {
+            const updates = {
+                ingredients: document.getElementById('edit-ing').value || '',
+                metode: document.getElementById('edit-met').value || '',
+                link: document.getElementById('edit-link').value || ''
+            };
+            db.ref('aliments').child(id).update(updates)
+                .then(() => {
+                    closeModal();
+                    window.showToast("Recepta actualitzada");
+                });
+        };
+
+        window.saveCaducitat = () => {
+            const nom = document.getElementById('cad-nom').value;
+            const data = document.getElementById('cad-data').value;
+            if(!nom || !data) return;
+            db.ref('aliments_caducitat').push({ nom, caducitat: data }).then(() => {
+                document.getElementById('cad-nom').value = "";
+                document.getElementById('cad-data').value = "";
+                window.showToast("Afegit correctament");
+            });
+        };
+
+        window.saveNew = () => {
+            const nom = document.getElementById('new-nom').value;
+            const ingredients = document.getElementById('new-ing').value;
+            const metode = document.getElementById('new-met').value;
+            const link = document.getElementById('new-link').value;
+            
+            if(!nom) {
+                window.showToast("El nom és obligatori");
+                return;
+            }
+            
+            db.ref('aliments').push({ 
+                nom, 
+                ingredients: ingredients || '', 
+                metode: metode || '',
+                link: link || '', 
+                fav: false
+            }).then(() => {
+                closeModal();
+                window.showToast("Recepta creada!");
+            });
+        };
+
+        window.toggleFav = (id, val) => db.ref('aliments').child(id).update({ fav: val }).then(closeModal);
+
+        window.removePlat = (f, t, i) => {
+            if(!allSelections[f] || !allSelections[f][t]) return;
+            const p = [...allSelections[f][t]];
+            p.splice(i, 1);
+            db.ref('seleccions').child(f).child(t).set(p);
+        };
+
+        window.addPlat = (f, t, n) => {
+            const p = (allSelections[f] && Array.isArray(allSelections[f][t])) ? [...allSelections[f][t]] : [];
+            p.push(n);
+            db.ref('seleccions').child(f).child(t).set(p).then(closeModal);
+        };
+
+        window.closeModal = () => {
+            const c = document.getElementById('modal-container');
+            if(c) c.classList.add('hidden');
+        };
+
+        // --- INICIALITZACIÓ ---
 
         function initFirebase() {
             const config = { databaseURL: "https://calendari-menjars-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -186,16 +270,12 @@
             db = firebase.database();
             
             db.ref('aliments').on('value', s => {
-                const data = s.val() || {};
-                allAliments = Object.keys(data).map(key => ({ ...data[key], id: key })).sort((a,b) => (a.nom || "").localeCompare(b.nom || ""));
+                const val = s.val() || {};
+                allAliments = Object.keys(val).map(key => ({ ...val[key], id: key }));
                 render();
             });
 
-            db.ref('seleccions').on('value', s => { 
-                allSelections = s.val() || {}; 
-                render(); 
-                if (!initialScrollDone) scrollToToday();
-            });
+            db.ref('seleccions').on('value', s => { allSelections = s.val() || {}; render(); });
 
             db.ref('aliments_caducitat').on('value', s => {
                 allCaducitats = s.val() || {};
@@ -203,88 +283,54 @@
             });
         }
 
-        function scrollToToday() {
-            if (initialScrollDone) return;
-            renderCalendar();
-            setTimeout(() => {
-                const todayCard = document.querySelector('.today-card');
-                if (todayCard) {
-                    todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    initialScrollDone = true;
-                }
-            }, 300);
-        }
-
-        window.setTab = function(tab) {
-            activeTab = (activeTab === tab) ? 'none' : tab;
-            render();
-            if (activeTab !== 'none') {
-                setTimeout(() => {
-                    const el = document.getElementById('dynamic-content');
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
-        };
-
         function render() {
             renderHeader();
             renderCalendar();
-            renderDynamicContent();
-            updateUIState();
+            renderDynamic();
+            updateUI();
         }
 
         function renderHeader() {
-            const hoy = new Date();
-            const day = hoy.getDay(), diff = hoy.getDate() - (day == 0 ? 6 : day - 1);
-            const lunes = new Date(new Date().setDate(diff + (offset * 7)));
-            const dom = new Date(lunes); dom.setDate(lunes.getDate() + 6);
-            document.getElementById('rango-fechas').innerText = `${lunes.getDate()}/${lunes.getMonth()+1} – ${dom.getDate()}/${dom.getMonth()+1}`;
+            const d = new Date();
+            const start = new Date(d.setDate(d.getDate() - (d.getDay() || 7) + 1 + (offset * 7)));
+            const end = new Date(start); end.setDate(start.getDate() + 6);
+            const r = document.getElementById('rango-fechas');
+            if(r) r.innerText = `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
         }
 
         function renderCalendar() {
             const grid = document.getElementById('calendar-grid');
-            if (!grid) return;
+            if(!grid) return;
             grid.innerHTML = "";
-            const hoy = new Date(); hoy.setHours(0,0,0,0);
-            const day = hoy.getDay(), diff = hoy.getDate() - (day == 0 ? 6 : day - 1);
-            const lunes = new Date(new Date().setDate(diff + (offset * 7)));
+            const today = new Date().toISOString().split('T')[0];
+            const d = new Date();
+            const start = new Date(d.setDate(d.getDate() - (d.getDay() || 7) + 1 + (offset * 7)));
 
-            for (let i = 0; i < 7; i++) {
-                const curr = new Date(lunes); curr.setDate(lunes.getDate() + i);
-                const iso = curr.toISOString().split('T')[0];
-                const esHoy = curr.getTime() === hoy.getTime();
-                
-                let alertsHtml = "";
-                Object.keys(allCaducitats).forEach(key => {
-                    if (allCaducitats[key] && allCaducitats[key].caducitat === iso) {
-                        alertsHtml += `
-                            <div class="caducitat-alert">
-                                <span>⚠️</span>
-                                <span class="truncate">${allCaducitats[key].nom || "Aliment"} caduca</span>
-                            </div>`;
-                    }
-                });
+            const dies = ["DILLUNS", "DIMARTS", "DIMECRES", "DIJOUS", "DIVENDRES", "DISSABTE", "DIUMENGE"];
+            
+            for(let i=0; i<7; i++) {
+                const cur = new Date(start); cur.setDate(start.getDate() + i);
+                const iso = cur.toISOString().split('T')[0];
+                const alerts = Object.values(allCaducitats).filter(c => c && c.caducitat === iso);
 
                 const card = document.createElement('div');
-                card.id = `day-${iso}`;
-                card.className = `day-card-dark ${esHoy ? 'today-card' : ''}`;
+                card.className = `day-card-dark ${iso === today ? 'today-card' : ''}`;
                 card.innerHTML = `
                     <div class="mb-4">
-                        <p class="text-[10px] font-extrabold tracking-widest ${esHoy ? 'text-orange-400' : 'text-slate-400'} mb-1">${diesSetmana[curr.getDay()]}</p>
-                        <h2 class="text-5xl font-black leading-none">${curr.getDate()}</h2>
-                        <p class="text-[11px] font-bold text-orange-400 mt-2 tracking-widest">${nomsMesos[curr.getMonth()]}</p>
-                        ${alertsHtml}
+                        <span class="text-[10px] font-bold text-orange-400">${dies[i]}</span>
+                        <h2 class="text-4xl font-black">${cur.getDate()}</h2>
+                        ${alerts.map(a => `<div class="caducitat-alert">⚠️ ${a.nom}</div>`).join('')}
                     </div>
-                    <div class="w-full space-y-8 mt-4 text-left">
+                    <div class="w-full text-left space-y-6">
                         <div>
-                            <div class="section-label"><span>☀️</span> DINAR</div>
-                            <div class="space-y-2">${renderPlats(iso, 'comida')}</div>
-                            <button onclick="openSelector('${iso}', 'comida')" class="btn-add-dashed">+ AFegir</button>
+                            <div class="section-label">☀️ DINAR</div>
+                            ${renderPlats(iso, 'comida')}
+                            <button onclick="openSelector('${iso}', 'comida')" class="btn-add-dashed">+ AFEGIR</button>
                         </div>
                         <div>
-                            <div class="section-label"><span>🌙</span> SOPAR</div>
-                            <div class="space-y-2">${renderPlats(iso, 'cena')}</div>
-                            <button onclick="openSelector('${iso}', 'cena')" class="btn-add-dashed">+ AFegir</button>
+                            <div class="section-label">🌙 SOPAR</div>
+                            ${renderPlats(iso, 'cena')}
+                            <button onclick="openSelector('${iso}', 'cena')" class="btn-add-dashed">+ AFEGIR</button>
                         </div>
                     </div>
                 `;
@@ -293,280 +339,180 @@
         }
 
         function renderPlats(fecha, tipo) {
-            const plats = allSelections[fecha]?.[tipo] || [];
-            if (plats.length === 0) return '';
-            return plats.map((n, idx) => `
+            const p = (allSelections[fecha] && allSelections[fecha][tipo]) ? allSelections[fecha][tipo] : [];
+            return p.map((n, i) => `
                 <div class="item-row">
                     <span class="text-sm font-bold truncate">${n}</span>
-                    <button onclick="delPlatSetmanal('${fecha}','${tipo}',${idx})" class="text-white/30 hover:text-red-400 text-lg">×</button>
+                    <button onclick="removePlat('${fecha}','${tipo}',${i})" class="text-white/20 hover:text-red-400">×</button>
                 </div>
             `).join('');
         }
 
-        function renderDynamicContent() {
-            const container = document.getElementById('dynamic-content');
-            if (!container) return;
-            const exportTab = document.getElementById('export-tab-content');
-            const listTab = document.getElementById('list-tab-content');
-            
-            if (activeTab === 'none') {
-                container.classList.add('hidden');
-                return;
-            }
-            
-            container.classList.remove('hidden');
-            if (activeTab === 'export') {
-                exportTab.classList.remove('hidden');
-                listTab.classList.add('hidden');
-            } else {
-                exportTab.classList.add('hidden');
-                listTab.classList.remove('hidden');
-                renderFoodGrid();
-            }
+        function renderDynamic() {
+            const cont = document.getElementById('dynamic-content');
+            const list = document.getElementById('list-tab-content');
+            const cad = document.getElementById('caducitat-tab-content');
+            const exp = document.getElementById('export-tab-content');
+
+            if(cont) cont.classList.toggle('hidden', activeTab === 'none');
+            if(list) list.classList.toggle('hidden', !['all', 'favs'].includes(activeTab));
+            if(cad) cad.classList.toggle('hidden', activeTab !== 'caducitat');
+            if(exp) exp.classList.toggle('hidden', activeTab !== 'export');
+
+            if(activeTab === 'caducitat') renderCadList();
+            if(['all', 'favs'].includes(activeTab)) renderFoodGrid();
         }
 
-        function renderFoodGrid() {
-            const grid = document.getElementById('main-grid');
-            if (!grid) return;
+        function renderCadList() {
+            const grid = document.getElementById('cad-list-grid');
+            if(!grid) return;
             grid.innerHTML = "";
-            const searchInput = document.getElementById('search-input');
-            const search = searchInput ? searchInput.value.toLowerCase() : "";
-            
-            let filtered = allAliments.filter(a => a && a.nom && a.nom.toLowerCase().includes(search));
-            if (activeTab === 'favs') filtered = filtered.filter(a => a.fav);
-            
-            if (activeTab === 'caducitat') {
-                const keys = Object.keys(allCaducitats);
-                if (keys.length === 0) {
-                    grid.innerHTML = "<div class='col-span-full p-8 text-center text-slate-400 font-bold italic'>No hi ha alertes de caducitat actives</div>";
-                    return;
-                }
-                keys.forEach(key => {
-                    const item = allCaducitats[key];
-                    if (!item) return;
-                    const div = document.createElement('div');
-                    div.className = "bg-red-50 p-4 rounded-2xl border border-red-100 shadow-sm col-span-2 md:col-span-1";
-                    div.innerHTML = `
-                        <div class="text-[12px] font-black text-red-700">${item.nom || "Aliment"}</div>
-                        <div class="text-[10px] font-bold text-red-400 mt-1 uppercase">Caduca: ${item.caducitat || "Sense data"}</div>
-                        <button onclick="delCaducitat('${key}')" class="mt-3 text-[10px] font-bold text-red-300 underline">ELIMINAR AVÍS</button>
-                    `;
-                    grid.appendChild(div);
-                });
-                return;
-            }
-
-            filtered.forEach(a => {
+            Object.keys(allCaducitats).forEach(id => {
+                const c = allCaducitats[id];
+                if(!c) return;
                 const div = document.createElement('div');
-                div.className = "bg-white p-4 rounded-2xl border shadow-sm cursor-pointer active:scale-95 transition-all";
-                div.onclick = () => openEditAliment(a.id);
+                div.className = "bg-white p-4 rounded-2xl border shadow-sm flex justify-between items-center";
                 div.innerHTML = `
-                    <div class="text-[13px] font-black text-slate-700 leading-tight">${a.nom}</div>
-                    <div class="mt-2 flex items-center gap-2">
-                        ${a.fav ? '<span class="text-[10px]">❤️</span>' : ''}
-                        ${a.link ? '<span class="text-[10px] text-orange-500 font-bold">🔗</span>' : ''}
+                    <div>
+                        <div class="font-black text-sm">${c.nom || 'Sense nom'}</div>
+                        <div class="text-[10px] font-bold text-red-500 uppercase">${c.caducitat || '-'}</div>
                     </div>
+                    <button onclick="deleteCaducitat('${id}')" class="text-red-400 font-black text-xs px-3">ESBORRAR</button>
                 `;
                 grid.appendChild(div);
             });
         }
 
-        window.exportAlimentsCSV = function() {
-            let csv = "Nom,Ingredients,Pas a Pas,Enllac,Preferit\n";
-            allAliments.forEach(a => {
-                csv += `"${a.nom || ""}","${(a.ingredients || '').replace(/"/g, '""')}","${(a.metode || '').replace(/"/g, '""')}","${a.link || ""}",${a.fav ? "Sí" : "No"}\n`;
-            });
-            downloadCSV(csv, "aliments.csv");
-        };
+        function renderFoodGrid() {
+            const grid = document.getElementById('main-grid');
+            const searchInput = document.getElementById('search-input');
+            if(!grid || !searchInput) return;
 
-        window.exportMenuCSV = function() {
-            const input = document.getElementById('export-month');
-            const monthVal = input ? input.value : "";
-            if(!monthVal) return;
-            let csv = "Data,Dinar,Sopar\n";
-            Object.keys(allSelections).filter(d => d.startsWith(monthVal)).sort().forEach(date => {
-                const dinar = (allSelections[date].comida || []).join(" | ");
-                const sopar = (allSelections[date].cena || []).join(" | ");
-                csv += `${date},"${dinar}","${sopar}"\n`;
+            const search = searchInput.value.toLowerCase();
+            grid.innerHTML = "";
+            
+            let filtered = allAliments.filter(a => {
+                const nom = (a && a.nom) ? a.nom.toLowerCase() : "";
+                return nom.includes(search);
             });
-            downloadCSV(csv, `menu_${monthVal}.csv`);
-        };
 
-        function downloadCSV(content, filename) {
-            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.setAttribute("href", URL.createObjectURL(blob));
-            link.setAttribute("download", filename);
-            link.click();
+            if(activeTab === 'favs') filtered = filtered.filter(a => a && a.fav);
+
+            filtered.forEach(a => {
+                if(!a) return;
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded-2xl border shadow-sm cursor-pointer";
+                div.onclick = () => openEdit(a);
+                div.innerHTML = `<div class="text-xs font-black truncate">${a.nom || 'Sense nom'}</div>`;
+                grid.appendChild(div);
+            });
         }
 
-        window.delCaducitat = (key) => confirm("Eliminar?") && db.ref('aliments_caducitat/' + key).remove();
-
-        window.openSelector = function(fecha, tipo) {
+        window.openEdit = (a) => {
             showModal(`
                 <div class="p-8 space-y-6">
-                    <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Afegir al ${tipo === 'comida' ? 'Dinar' : 'Sopar'}</h3>
-                    <input type="text" id="modal-search" placeholder="Busca recepta..." oninput="filterModalRecipes('${fecha}', '${tipo}')" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none ring-2 ring-slate-100 focus:ring-orange-500 outline-none">
-                    <div id="modal-recipe-list" class="space-y-2 max-h-64 overflow-y-auto no-scrollbar"></div>
-                    <button onclick="closeModal()" class="w-full py-4 text-slate-400 font-bold">Tancar</button>
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-black">${a.nom || 'Sense nom'}</h2>
+                        <button onclick="toggleFav('${a.id}', ${!a.fav})" class="text-2xl">${a.fav ? '❤️' : '🤍'}</button>
+                    </div>
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Ingredients</label>
+                        <textarea id="edit-ing" placeholder="Ingredients..." class="w-full p-4 bg-slate-50 border rounded-2xl h-24 font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">${a.ingredients || ''}</textarea>
+                        
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Com es prepara?</label>
+                        <textarea id="edit-met" placeholder="Pas a pas..." class="w-full p-4 bg-slate-50 border rounded-2xl h-32 font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">${a.metode || ''}</textarea>
+                        
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Link</label>
+                        <input id="edit-link" type="url" value="${a.link || ''}" placeholder="https://..." class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button onclick="updateRecepta('${a.id}')" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black">DESAR CANVIS</button>
+                        <button onclick="deleteRecepta('${a.id}')" class="px-6 bg-red-100 text-red-500 rounded-2xl font-black">🗑️</button>
+                    </div>
+                    <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
                 </div>
             `);
-            filterModalRecipes(fecha, tipo);
-        };
-
-        window.filterModalRecipes = function(fecha, tipo) {
-            const searchInput = document.getElementById('modal-search');
-            const txt = searchInput ? searchInput.value.toLowerCase() : "";
-            const list = document.getElementById('modal-recipe-list');
-            if (!list) return;
-            list.innerHTML = "";
-            allAliments.filter(a => a && a.nom && a.nom.toLowerCase().includes(txt)).forEach(a => {
-                const item = document.createElement('div');
-                item.className = "p-4 bg-slate-50 hover:bg-orange-50 rounded-2xl cursor-pointer font-bold text-sm flex justify-between items-center transition-all";
-                item.onclick = () => {
-                    let plats = Array.isArray(allSelections[fecha]?.[tipo]) ? [...allSelections[fecha][tipo]] : [];
-                    plats.push(a.nom);
-                    db.ref(`seleccions/${fecha}/${tipo}`).set(plats).then(closeModal);
-                };
-                item.innerHTML = `<span>${a.nom}</span> <span class="text-orange-500 font-black">＋</span>`;
-                list.appendChild(item);
-            });
-        };
-
-        window.delPlatSetmanal = (fecha, tipo, idx) => {
-            let plats = [...(allSelections[fecha][tipo] || [])];
-            plats.splice(idx, 1);
-            db.ref(`seleccions/${fecha}/${tipo}`).set(plats);
         };
 
         window.openCreateAliment = () => {
             showModal(`
                 <div class="p-8 space-y-6">
-                    <h3 class="text-xl font-black">Nova Recepta</h3>
-                    <input type="text" id="m-nom" placeholder="Nom del plat..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
-                    
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Ingredients</label>
-                        <textarea id="m-ingredients" placeholder="Llista d'ingredients..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-24 mt-1"></textarea>
+                    <h2 class="text-xl font-black">Nova Recepta</h2>
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Nom de la recepta</label>
+                        <input id="new-nom" placeholder="Nom del plat..." class="w-full p-4 bg-slate-50 border rounded-2xl font-bold outline-none focus:ring-2 focus:ring-orange-500">
+                        
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Ingredients</label>
+                        <textarea id="new-ing" placeholder="Llista d'ingredients..." class="w-full p-4 bg-slate-50 border rounded-2xl h-24 font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                        
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Com es prepara?</label>
+                        <textarea id="new-met" placeholder="Instruccions pas a pas..." class="w-full p-4 bg-slate-50 border rounded-2xl h-24 font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                        
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Link</label>
+                        <input id="new-link" type="url" placeholder="Link (opcional)" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">
                     </div>
-
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Com es fa?</label>
-                        <textarea id="m-metode" placeholder="Pas a pas de la preparació..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-32 mt-1"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Enllaç (URL)</label>
-                        <input type="url" id="m-link" placeholder="https://..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none mt-1">
-                    </div>
-
-                    <button onclick="saveNewAliment()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-100">CREAR RECEPTA</button>
+                    <button onclick="saveNew()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-200">CREAR RECEPTA</button>
                     <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
                 </div>
             `);
         };
 
-        window.saveNewAliment = () => {
-            const nom = document.getElementById('m-nom')?.value;
-            const ingredients = document.getElementById('m-ingredients')?.value || "";
-            const metode = document.getElementById('m-metode')?.value || "";
-            const link = document.getElementById('m-link')?.value || "";
-            
-            if(!nom) return;
-            db.ref('aliments').push({ 
-                nom, 
-                ingredients, 
-                metode, 
-                link, 
-                fav: false 
-            }).then(closeModal);
-        };
-
-        window.openEditAliment = (id) => {
-            const a = allAliments.find(x => x.id === id);
-            if (!a) return;
+        window.openSelector = (f, t) => {
             showModal(`
                 <div class="p-8 space-y-6">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-black">${a.nom}</h3>
-                        <div class="flex gap-3">
-                            ${a.link ? `<a href="${a.link}" target="_blank" class="bg-orange-100 text-orange-600 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1">🌐 Web</a>` : ''}
-                            <button onclick="toggleFav('${a.id}', ${!a.fav})" class="text-2xl">${a.fav ? '❤️' : '🤍'}</button>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Ingredients</label>
-                            <textarea id="e-ingredients" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-24 mt-1">${a.ingredients || ''}</textarea>
-                        </div>
-                        
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Com es fa?</label>
-                            <textarea id="e-metode" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none h-32 mt-1">${a.metode || ''}</textarea>
-                        </div>
-
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Enllaç (URL)</label>
-                            <input type="url" id="e-link" value="${a.link || ''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border outline-none mt-1">
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2 pt-4">
-                        <button onclick="updateAliment('${id}')" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black">DESAR CANVIS</button>
-                        <button onclick="deleteAliment('${id}')" class="px-6 bg-red-50 text-red-500 rounded-2xl font-black">🗑️</button>
+                    <h2 class="text-xl font-black uppercase">Afegir al menú</h2>
+                    <div class="space-y-2 max-h-80 overflow-y-auto pr-2">
+                        ${allAliments.map(a => `
+                            <div onclick="addPlat('${f}','${t}','${(a.nom || 'Sense nom').replace(/'/g,"\\'")}')" class="p-4 bg-slate-50 rounded-2xl font-bold cursor-pointer hover:bg-orange-50 border border-transparent hover:border-orange-200 transition-all">${a.nom || 'Sense nom'}</div>
+                        `).join('')}
                     </div>
                     <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
                 </div>
             `);
         };
 
-        window.toggleFav = (id, val) => db.ref('aliments/' + id).update({ fav: val }).then(closeModal);
-        
-        window.updateAliment = (id) => {
-            const ingredients = document.getElementById('e-ingredients')?.value || "";
-            const metode = document.getElementById('e-metode')?.value || "";
-            const link = document.getElementById('e-link')?.value || "";
-            
-            db.ref('aliments/' + id).update({ 
-                ingredients, 
-                metode, 
-                link 
-            }).then(closeModal);
+        window.exportCSV = () => {
+            let csv = "Nom,Ingredients,Metode,Link\n";
+            allAliments.forEach(a => {
+                csv += `"${a.nom || ''}","${(a.ingredients || '').replace(/\n/g, ' ')}","${(a.metode || '').replace(/\n/g, ' ')}","${a.link || ''}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'receptes.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         };
 
-        window.deleteAliment = (id) => confirm("Vols eliminar aquesta recepta?") && db.ref('aliments/' + id).remove().then(closeModal);
+        window.setTab = (t) => { activeTab = activeTab === t ? 'none' : t; render(); };
+        window.changeWeek = (n) => { offset += n; render(); };
 
-        function showModal(html) {
-            const content = document.getElementById('modal-content');
-            if (content) content.innerHTML = html;
-            const container = document.getElementById('modal-container');
-            if (container) container.classList.remove('hidden');
-        }
-        window.closeModal = () => {
-            const container = document.getElementById('modal-container');
-            if (container) container.classList.add('hidden');
-        };
-
-        function updateUIState() {
+        function updateUI() {
             ['all', 'favs', 'caducitat', 'export'].forEach(t => {
-                const btn = document.getElementById('btn-'+t);
-                if (btn) btn.classList.toggle('active-tab', activeTab === t);
+                const b = document.getElementById('btn-'+t);
+                if(b) b.classList.toggle('active-tab', activeTab === t);
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initFirebase();
-            const prev = document.getElementById('btn-prev');
-            const next = document.getElementById('btn-next');
-            const search = document.getElementById('search-input');
-            const container = document.getElementById('modal-container');
+        function showModal(h) {
+            const m = document.getElementById('modal-content');
+            const c = document.getElementById('modal-container');
+            if(m && c) {
+                m.innerHTML = h;
+                c.classList.remove('hidden');
+            }
+        }
 
-            if (prev) prev.onclick = () => { offset--; render(); };
-            if (next) next.onclick = () => { offset++; render(); };
-            if (search) search.oninput = render;
-            if (container) container.onclick = (e) => e.target.id === 'modal-container' && closeModal();
+        document.addEventListener('input', (e) => {
+            if(e.target.id === 'search-input') render();
         });
+
+        document.getElementById('modal-container').onclick = (e) => e.target.id === 'modal-container' && closeModal();
+
+        initFirebase();
     </script>
 </body>
 </html>
