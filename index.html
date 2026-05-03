@@ -83,7 +83,6 @@
             border: 3px solid var(--primary);
         }
 
-        /* Estil per evitar que el text surti del recuandre */
         .recipe-card-text {
             word-break: break-word;
             overflow-wrap: break-word;
@@ -107,23 +106,52 @@
             display: none;
         }
 
-        /* Icona d'acció ràpida a la graella */
-        .action-icon {
-            background: #f1f5f9;
-            width: 28px;
-            height: 28px;
+        /* Estils per a les noves icones separades */
+        .food-card {
+            background: white;
+            border-radius: 1.5rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: transform 0.2s;
+        }
+
+        .food-card:active {
+            transform: scale(0.98);
+        }
+
+        .action-btn-circle {
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 50%;
+            font-size: 18px;
+            background: #f1f5f9;
+            transition: all 0.2s;
             flex-shrink: 0;
-            margin-left: 8px;
-            transition: transform 0.2s;
         }
-        
-        .action-icon:active {
-            transform: scale(0.9);
+
+        .action-btn-circle.active-heart { background: #fee2e2; }
+        .action-btn-circle.active-eyes { background: #e0f2fe; }
+
+        .link-footer-btn {
+            width: 100%;
+            padding: 8px;
+            background: #f8fafc;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #64748b;
+            border: 1px solid #f1f5f9;
         }
     </style>
 </head>
@@ -148,7 +176,7 @@
             <!-- Cercador -->
             <div id="list-tab-content" class="hidden">
                 <input type="text" id="search-input" placeholder="Cerca receptes..." class="w-full p-4 bg-white rounded-2xl border shadow-sm mb-4 font-bold outline-none focus:ring-2 focus:ring-orange-500">
-                <div id="main-grid" class="grid grid-cols-2 gap-3"></div>
+                <div id="main-grid" class="grid grid-cols-1 gap-4"></div>
             </div>
 
             <!-- Caducitats -->
@@ -255,10 +283,18 @@
             const metode = document.getElementById('new-met').value;
             const link = document.getElementById('new-link').value;
             if(!nom) { window.showToast("El nom és obligatori"); return; }
-            db.ref('aliments').push({ nom, ingredients: ingredients || '', metode: metode || '', link: link || '', fav: false }).then(() => { closeModal(); window.showToast("Recepta creada!"); });
+            db.ref('aliments').push({ nom, ingredients: ingredients || '', metode: metode || '', link: link || '', fav: false, provar: false }).then(() => { closeModal(); window.showToast("Recepta creada!"); });
         };
 
-        window.toggleFav = (id, val) => db.ref('aliments').child(id).update({ fav: val }).then(closeModal);
+        window.toggleFav = (id, val, e) => {
+            if(e) e.stopPropagation();
+            db.ref('aliments').child(id).update({ fav: val });
+        };
+
+        window.toggleProvar = (id, val, e) => {
+            if(e) e.stopPropagation();
+            db.ref('aliments').child(id).update({ provar: val });
+        };
 
         window.removePlat = (f, t, i) => {
             if(!allSelections[f] || !allSelections[f][t]) return;
@@ -279,7 +315,7 @@
         };
 
         window.handleActionClick = (e, link, query) => {
-            e.stopPropagation(); // Evita obrir la fitxa d'edició
+            e.stopPropagation();
             if (link) {
                 window.open(link, '_blank');
             } else {
@@ -406,15 +442,34 @@
             filtered.forEach(a => {
                 if(!a) return;
                 const div = document.createElement('div');
-                div.className = "bg-white p-4 rounded-2xl border shadow-sm cursor-pointer flex items-center justify-between min-h-[64px]";
+                div.className = "food-card cursor-pointer";
                 div.onclick = () => openEdit(a);
                 
                 const hasLink = a.link && a.link.trim().length > 0;
+                const isFav = !!a.fav;
+                const isProvar = !!a.provar;
                 
                 div.innerHTML = `
-                    <div class="text-xs font-black leading-tight recipe-card-text flex-1">${a.nom || 'Sense nom'}</div>
-                    <div class="action-icon" onclick="handleActionClick(event, '${hasLink ? a.link : ''}', '${(a.nom || '').replace(/'/g, "\\'")}')">
-                        ${hasLink ? '🔗' : '🔍'}
+                    <div class="flex items-center justify-between gap-4">
+                        <!-- Esquerra: M'agrada -->
+                        <div class="action-btn-circle ${isFav ? 'active-heart' : ''}" onclick="toggleFav('${a.id}', ${!isFav}, event)">
+                            ${isFav ? '❤️' : '🤍'}
+                        </div>
+                        
+                        <!-- Centre: Nom -->
+                        <div class="text-center flex-1">
+                            <div class="text-sm font-black leading-tight recipe-card-text">${a.nom || 'Sense nom'}</div>
+                        </div>
+
+                        <!-- Dreta: Provar -->
+                        <div class="action-btn-circle ${isProvar ? 'active-eyes' : ''}" onclick="toggleProvar('${a.id}', ${!isProvar}, event)">
+                            ${isProvar ? '👀' : '👁️'}
+                        </div>
+                    </div>
+
+                    <!-- Abaix: Link -->
+                    <div class="link-footer-btn" onclick="handleActionClick(event, '${hasLink ? a.link : ''}', '${(a.nom || '').replace(/'/g, "\\'")}')">
+                        <span>${hasLink ? '🔗 VEURE RECEPTA' : '🔍 BUSCAR A GOOGLE'}</span>
                     </div>
                 `;
                 grid.appendChild(div);
@@ -426,7 +481,10 @@
                 <div class="p-8 space-y-6">
                     <div class="flex justify-between items-start gap-4">
                         <h2 class="text-xl font-black recipe-card-text">${a.nom || 'Sense nom'}</h2>
-                        <button onclick="toggleFav('${a.id}', ${!a.fav})" class="text-2xl shrink-0">${a.fav ? '❤️' : '🤍'}</button>
+                        <div class="flex gap-2">
+                             <button onclick="toggleProvar('${a.id}', ${!a.provar})" class="text-2xl">${a.provar ? '👀' : '👁️'}</button>
+                             <button onclick="toggleFav('${a.id}', ${!a.fav})" class="text-2xl">${a.fav ? '❤️' : '🤍'}</button>
+                        </div>
                     </div>
                     <div class="space-y-4">
                         <label class="text-[10px] font-black text-slate-400 uppercase">Ingredients</label>
