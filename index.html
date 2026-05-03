@@ -137,9 +137,24 @@
             </div>
 
             <!-- Exportar -->
-            <div id="export-tab-content" class="hidden bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
-                <h3 class="font-bold text-sm uppercase">Dades</h3>
-                <button onclick="exportCSV()" class="w-full py-4 bg-slate-50 rounded-2xl font-bold text-xs">Descarregar Receptes (CSV)</button>
+            <div id="export-tab-content" class="hidden space-y-4">
+                <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
+                    <h3 class="font-bold text-xs uppercase text-slate-400">Exportar Menú Setmanal</h3>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold block ml-1">DES DE:</label>
+                        <input type="date" id="export-start" class="w-full p-3 bg-slate-50 rounded-xl border font-bold text-sm">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold block ml-1">FINS A:</label>
+                        <input type="date" id="export-end" class="w-full p-3 bg-slate-50 rounded-xl border font-bold text-sm">
+                    </div>
+                    <button onclick="exportMenuCSV()" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-orange-100">DESCARREGAR MENÚ (CSV)</button>
+                </div>
+
+                <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
+                    <h3 class="font-bold text-xs uppercase text-slate-400">Base de Dades</h3>
+                    <button onclick="exportReceptesCSV()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs">DESCARREGAR TOTES LES RECEPTES (CSV)</button>
+                </div>
             </div>
         </div>
 
@@ -168,7 +183,7 @@
         let allSelections = {};
         let allCaducitats = {};
 
-        // --- DEFINICIÓ DE FUNCIONS GLOBALS PRIMER ---
+        // --- DEFINICIÓ DE FUNCIONS GLOBALS ---
 
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
@@ -471,21 +486,55 @@
             `);
         };
 
-        window.exportCSV = () => {
+        // --- EXPORTACIONS ---
+
+        window.exportReceptesCSV = () => {
             let csv = "Nom,Ingredients,Metode,Link\n";
             allAliments.forEach(a => {
-                csv += `"${a.nom || ''}","${(a.ingredients || '').replace(/\n/g, ' ')}","${(a.metode || '').replace(/\n/g, ' ')}","${a.link || ''}"\n`;
+                csv += `"${(a.nom || '').replace(/"/g, '""')}","${(a.ingredients || '').replace(/\n/g, ' ').replace(/"/g, '""')}","${(a.metode || '').replace(/\n/g, ' ').replace(/"/g, '""')}","${(a.link || '').replace(/"/g, '""')}"\n`;
             });
-            const blob = new Blob([csv], { type: 'text/csv' });
+            downloadCSV(csv, 'totes_les_receptes.csv');
+        };
+
+        window.exportMenuCSV = () => {
+            const start = document.getElementById('export-start').value;
+            const end = document.getElementById('export-end').value;
+
+            if(!start || !end) {
+                window.showToast("Selecciona les dates");
+                return;
+            }
+
+            let csv = "Data,Tipus,Plats\n";
+            const s = new Date(start);
+            const e = new Date(end);
+
+            for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+                const iso = d.toISOString().split('T')[0];
+                const sel = allSelections[iso] || {};
+                
+                const dinars = (sel.comida || []).join(' | ');
+                const sopars = (sel.cena || []).join(' | ');
+
+                if(dinars) csv += `${iso},DINAR,"${dinars.replace(/"/g, '""')}"\n`;
+                if(sopars) csv += `${iso},SOPAR,"${sopars.replace(/"/g, '""')}"\n`;
+            }
+
+            downloadCSV(csv, `menu_${start}_a_${end}.csv`);
+        };
+
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.setAttribute('hidden', '');
             a.setAttribute('href', url);
-            a.setAttribute('download', 'receptes.csv');
+            a.setAttribute('download', filename);
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-        };
+            window.showToast("CSV generat correctament");
+        }
 
         window.setTab = (t) => { activeTab = activeTab === t ? 'none' : t; render(); };
         window.changeWeek = (n) => { offset += n; render(); };
