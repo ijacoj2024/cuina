@@ -11,6 +11,7 @@
         :root {
             --primary: #f59e0b;
             --dark-card: #1e293b;
+            --dark-today: #0f172a;
         }
 
         body {
@@ -28,6 +29,17 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        /* Estil per al dia actual: vora doble i ombra */
+        .today-card {
+            border: 6px solid var(--primary) !important;
+            background-color: var(--dark-today) !important;
+            box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.4);
+            transform: scale(1.02);
+            z-index: 10;
         }
 
         .btn-add-dashed {
@@ -93,10 +105,6 @@
             border-radius: 50%;
             font-size: 10px;
             margin-left: 8px;
-        }
-        
-        .today-card {
-            border: 3px solid var(--primary);
         }
 
         .recipe-card-text {
@@ -219,7 +227,6 @@
             </div>
 
             <div id="export-tab-content" class="hidden space-y-6">
-                <!-- Exportar Menú -->
                 <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
                     <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-wider">Exportar Menú Setmanal</h3>
                     <div class="space-y-2">
@@ -233,7 +240,6 @@
                     <button onclick="exportMenuCSV()" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-orange-100 active:scale-95 transition-transform">DESCARREGAR MENÚ (CSV)</button>
                 </div>
 
-                <!-- Exportar Llista Aliments -->
                 <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-xl">📋</span>
@@ -292,7 +298,21 @@
                 render();
             });
             db.ref('seleccions').on('value', s => { allSelections = s.val() || {}; render(); });
-            db.ref('aliments_caducitat').on('value', s => { allCaducitats = s.val() || {}; render(); });
+            
+            db.ref('aliments_caducitat').on('value', s => { 
+                allCaducitats = s.val() || {}; 
+                cleanExpiredCaducitats();
+                render(); 
+            });
+        }
+
+        function cleanExpiredCaducitats() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            Object.entries(allCaducitats).forEach(([id, item]) => {
+                if (item.caducitat < todayStr) {
+                    db.ref('aliments_caducitat').child(id).remove();
+                }
+            });
         }
 
         function setTab(tab) {
@@ -669,10 +689,8 @@
             downloadCSV(csv, `menu_${startStr}_${endStr}.csv`);
         };
 
-        // Nova funció per exportar la llista d'aliments
         window.exportAlimentsCSV = () => {
             if (!allAliments.length) return showToast("No hi ha aliments per exportar");
-            
             let csv = "Nom,Ingredients,Metode,Link,Preferit,Per Provar\n";
             allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).forEach(a => {
                 const nom = (a.nom || "").replace(/"/g, '""');
@@ -681,10 +699,8 @@
                 const link = (a.link || "").replace(/"/g, '""');
                 const fav = a.fav ? "SÍ" : "NO";
                 const provar = a.provar ? "SÍ" : "NO";
-                
                 csv += `"${nom}","${ing}","${met}","${link}","${fav}","${provar}"\n`;
             });
-            
             const timestamp = new Date().toISOString().split('T')[0];
             downloadCSV(csv, `llista_receptes_${timestamp}.csv`);
         };
