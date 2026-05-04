@@ -218,18 +218,29 @@
                 <div id="cad-list-grid" class="space-y-3"></div>
             </div>
 
-            <div id="export-tab-content" class="hidden space-y-4">
+            <div id="export-tab-content" class="hidden space-y-6">
+                <!-- Exportar Menú -->
                 <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
-                    <h3 class="font-bold text-xs uppercase text-slate-400">Exportar Menú Setmanal</h3>
+                    <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-wider">Exportar Menú Setmanal</h3>
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold block ml-1">DES DE:</label>
-                        <input type="date" id="export-start" class="w-full p-3 bg-slate-50 rounded-xl border font-bold text-sm">
+                        <input type="date" id="export-start" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">
                     </div>
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold block ml-1">FINS A:</label>
-                        <input type="date" id="export-end" class="w-full p-3 bg-slate-50 rounded-xl border font-bold text-sm">
+                        <input type="date" id="export-end" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">
                     </div>
-                    <button onclick="exportMenuCSV()" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-orange-100">DESCARREGAR (CSV)</button>
+                    <button onclick="exportMenuCSV()" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-orange-100 active:scale-95 transition-transform">DESCARREGAR MENÚ (CSV)</button>
+                </div>
+
+                <!-- Exportar Llista Aliments -->
+                <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-xl">📋</span>
+                        <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-wider">Còpia de Seguretat</h3>
+                    </div>
+                    <p class="text-[11px] font-medium text-slate-500 px-1 leading-relaxed">Baixa un fitxer amb totes les teves receptes, ingredients i mètodes de preparació.</p>
+                    <button onclick="exportAlimentsCSV()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-transform">EXPORTAR LLISTA ALIMENTS (CSV)</button>
                 </div>
             </div>
         </div>
@@ -237,6 +248,7 @@
         <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t p-4 flex justify-around items-center z-50">
             <button onclick="setTab('all')" id="btn-all" class="p-3 text-xl rounded-2xl transition-all">📂</button>
             <button onclick="setTab('favs')" id="btn-favs" class="p-3 text-xl rounded-2xl transition-all">❤️</button>
+            <button onclick="setTab('provar')" id="btn-provar" class="p-3 text-xl rounded-2xl transition-all">👀</button>
             <button onclick="openCreateAliment('', '', '', '')" class="bg-orange-500 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center text-xl hover:scale-110 transition-transform">＋</button>
             <button onclick="setTab('caducitat')" id="btn-caducitat" class="p-3 text-xl rounded-2xl transition-all">⌛</button>
             <button onclick="setTab('export')" id="btn-export" class="p-3 text-xl rounded-2xl transition-all">📊</button>
@@ -376,12 +388,12 @@
             const exp = document.getElementById('export-tab-content');
             
             if(cont) cont.classList.toggle('hidden', activeTab === 'none');
-            if(list) list.classList.toggle('hidden', !['all', 'favs'].includes(activeTab));
+            if(list) list.classList.toggle('hidden', !['all', 'favs', 'provar'].includes(activeTab));
             if(cad) cad.classList.toggle('hidden', activeTab !== 'caducitat');
             if(exp) exp.classList.toggle('hidden', activeTab !== 'export');
             
             if(activeTab === 'caducitat') renderCadList();
-            if(['all', 'favs'].includes(activeTab)) renderFoodGrid();
+            if(['all', 'favs', 'provar'].includes(activeTab)) renderFoodGrid();
         }
 
         function renderFoodGrid() {
@@ -391,7 +403,9 @@
             const search = searchInput ? searchInput.value.toLowerCase() : "";
             grid.innerHTML = "";
             let filtered = allAliments.filter(a => (a && a.nom ? a.nom.toLowerCase() : "").includes(search));
+            
             if(activeTab === 'favs') filtered = filtered.filter(a => a && a.fav);
+            if(activeTab === 'provar') filtered = filtered.filter(a => a && a.provar);
             
             filtered.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).forEach(a => {
                 const div = document.createElement('div');
@@ -470,7 +484,7 @@
         }
 
         function updateUI() {
-            ['all', 'favs', 'caducitat', 'export'].forEach(t => {
+            ['all', 'favs', 'provar', 'caducitat', 'export'].forEach(t => {
                 const btn = document.getElementById('btn-' + t);
                 if(btn) btn.classList.toggle('active-tab', activeTab === t);
             });
@@ -653,6 +667,26 @@
                 cur.setDate(cur.getDate() + 1);
             }
             downloadCSV(csv, `menu_${startStr}_${endStr}.csv`);
+        };
+
+        // Nova funció per exportar la llista d'aliments
+        window.exportAlimentsCSV = () => {
+            if (!allAliments.length) return showToast("No hi ha aliments per exportar");
+            
+            let csv = "Nom,Ingredients,Metode,Link,Preferit,Per Provar\n";
+            allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).forEach(a => {
+                const nom = (a.nom || "").replace(/"/g, '""');
+                const ing = (a.ingredients || "").replace(/"/g, '""').replace(/\n/g, ' ');
+                const met = (a.metode || "").replace(/"/g, '""').replace(/\n/g, ' ');
+                const link = (a.link || "").replace(/"/g, '""');
+                const fav = a.fav ? "SÍ" : "NO";
+                const provar = a.provar ? "SÍ" : "NO";
+                
+                csv += `"${nom}","${ing}","${met}","${link}","${fav}","${provar}"\n`;
+            });
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            downloadCSV(csv, `llista_receptes_${timestamp}.csv`);
         };
 
         function downloadCSV(content, filename) {
