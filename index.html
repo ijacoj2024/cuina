@@ -106,7 +106,6 @@
             display: none;
         }
 
-        /* Estils per a les noves icones separades */
         .food-card {
             background: white;
             border-radius: 1.5rem;
@@ -173,7 +172,7 @@
         <div id="calendar-grid" class="flex flex-col gap-6 mb-12"></div>
 
         <div id="dynamic-content" class="mb-12 hidden">
-            <!-- Cercador -->
+            <!-- Cercador Principal -->
             <div id="list-tab-content" class="hidden">
                 <input type="text" id="search-input" placeholder="Cerca receptes..." class="w-full p-4 bg-white rounded-2xl border shadow-sm mb-4 font-bold outline-none focus:ring-2 focus:ring-orange-500">
                 <div id="main-grid" class="grid grid-cols-1 gap-4"></div>
@@ -451,23 +450,16 @@
                 
                 div.innerHTML = `
                     <div class="flex items-center justify-between gap-4">
-                        <!-- Esquerra: M'agrada -->
                         <div class="action-btn-circle ${isFav ? 'active-heart' : ''}" onclick="toggleFav('${a.id}', ${!isFav}, event)">
                             ${isFav ? '❤️' : '🤍'}
                         </div>
-                        
-                        <!-- Centre: Nom -->
                         <div class="text-center flex-1">
                             <div class="text-sm font-black leading-tight recipe-card-text">${a.nom || 'Sense nom'}</div>
                         </div>
-
-                        <!-- Dreta: Provar -->
                         <div class="action-btn-circle ${isProvar ? 'active-eyes' : ''}" onclick="toggleProvar('${a.id}', ${!isProvar}, event)">
                             ${isProvar ? '👀' : '👁️'}
                         </div>
                     </div>
-
-                    <!-- Abaix: Link -->
                     <div class="link-footer-btn" onclick="handleActionClick(event, '${hasLink ? a.link : ''}', '${(a.nom || '').replace(/'/g, "\\'")}')">
                         <span>${hasLink ? '🔗 VEURE RECEPTA' : '🔍 BUSCAR A GOOGLE'}</span>
                     </div>
@@ -523,18 +515,39 @@
             `);
         };
 
+        // Funció per filtrar els plats dins del selector del menú
+        window.filterSelector = () => {
+            const query = document.getElementById('selector-search').value.toLowerCase();
+            const items = document.querySelectorAll('.selector-item');
+            items.forEach(item => {
+                const name = item.getAttribute('data-name').toLowerCase();
+                item.style.display = name.includes(query) ? 'block' : 'none';
+            });
+        };
+
         window.openSelector = (f, t) => {
             showModal(`
-                <div class="p-8 space-y-6">
+                <div class="p-8 space-y-4">
                     <h2 class="text-xl font-black uppercase">Afegir al menú</h2>
-                    <div class="space-y-2 max-h-80 overflow-y-auto pr-2">
+                    
+                    <!-- Cercador del selector -->
+                    <input type="text" id="selector-search" oninput="filterSelector()" placeholder="Cerca un plat..." 
+                        class="w-full p-3 bg-slate-50 rounded-xl border font-bold outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                    
+                    <div id="selector-list" class="space-y-2 max-h-80 overflow-y-auto pr-2">
                         ${allAliments.map(a => `
-                            <div onclick="addPlat('${f}','${t}','${(a.nom || 'Sense nom').replace(/'/g,"\\'")}')" class="p-4 bg-slate-50 rounded-2xl font-bold cursor-pointer hover:bg-orange-50 border border-transparent hover:border-orange-200 transition-all leading-tight recipe-card-text">${a.nom || 'Sense nom'}</div>
+                            <div onclick="addPlat('${f}','${t}','${(a.nom || 'Sense nom').replace(/'/g,"\\'")}')" 
+                                 data-name="${(a.nom || 'Sense nom')}"
+                                 class="selector-item p-4 bg-slate-50 rounded-2xl font-bold cursor-pointer hover:bg-orange-50 border border-transparent hover:border-orange-200 transition-all leading-tight recipe-card-text">
+                                ${a.nom || 'Sense nom'}
+                            </div>
                         `).join('')}
                     </div>
                     <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-bold">Tancar</button>
                 </div>
             `);
+            // Focus automàtic al cercador per comoditat
+            setTimeout(() => document.getElementById('selector-search').focus(), 100);
         };
 
         window.exportReceptesCSV = () => {
@@ -585,7 +598,10 @@
             if(m && c) { m.innerHTML = h; c.classList.remove('hidden'); }
         }
 
-        document.addEventListener('input', (e) => { if(e.target.id === 'search-input') render(); });
+        document.addEventListener('input', (e) => { 
+            if(e.target.id === 'search-input') render(); 
+        });
+        
         document.getElementById('modal-container').onclick = (e) => e.target.id === 'modal-container' && closeModal();
 
         initFirebase();
