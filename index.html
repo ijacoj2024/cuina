@@ -1,4 +1,5 @@
 
+<!DOCTYPE html>
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
@@ -323,12 +324,12 @@
                         <div>
                             <div class="section-label">☀️ DINAR</div>
                             <div id="list-${iso}-comida">${renderPlats(iso, 'comida')}</div>
-                            <button onclick="openSelector('${iso}', 'comida')" class="btn-add-dashed">+ AFEGIR MULTIPLE</button>
+                            <button onclick="openSelector('${iso}', 'comida')" class="btn-add-dashed">+ AFEGIR PLAT</button>
                         </div>
                         <div>
                             <div class="section-label">🌙 SOPAR</div>
                             <div id="list-${iso}-cena">${renderPlats(iso, 'cena')}</div>
-                            <button onclick="openSelector('${iso}', 'cena')" class="btn-add-dashed">+ AFEGIR MULTIPLE</button>
+                            <button onclick="openSelector('${iso}', 'cena')" class="btn-add-dashed">+ AFEGIR PLAT</button>
                         </div>
                     </div>
                 `;
@@ -547,7 +548,7 @@
         window.updateRecepta = (id) => {
             const upd = {
                 ingredients: document.getElementById('edit-ing').value,
-                metode: document.getElementById('edit-met').value,
+                metode: document.getElementById('edit-metode').value,
                 link: document.getElementById('edit-link').value
             };
             db.ref('aliments').child(id).update(upd).then(() => { closeModal(); showToast("Actualitzat"); });
@@ -563,7 +564,7 @@
             const itemsHtml = allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).map(a => {
                 const safeNom = (a.nom || '').replace(/'/g, "\\'");
                 return `
-                    <div onclick="addPlatMultiple('${f}','${t}','${safeNom}', this)" class="sel-item p-4 bg-slate-50 rounded-xl font-bold cursor-pointer hover:bg-orange-50 border transition-colors mb-2" data-name="${safeNom}">
+                    <div onclick="addAndClose('${f}','${t}','${safeNom}', this)" class="sel-item p-4 bg-slate-50 rounded-xl font-bold cursor-pointer hover:bg-orange-50 border transition-colors mb-2" data-name="${safeNom}">
                         ${a.nom || 'Sense nom'}
                     </div>
                 `;
@@ -572,26 +573,31 @@
             showModal(`
                 <div class="p-8 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-black">AFEGIR PLATS</h2>
-                        <button onclick="closeModal()" class="text-slate-400 text-2xl font-bold">Fet</button>
+                        <h2 class="text-xl font-black">ESCULL PLAT</h2>
+                        <button onclick="closeModal()" class="text-slate-400 text-2xl font-bold">×</button>
                     </div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Toca tots els que vulguis i després tanca</p>
-                    <input type="text" id="sel-search" oninput="filterSel()" placeholder="Cerca..." class="w-full p-3 bg-slate-50 border rounded-xl font-bold">
-                    <div class="max-h-80 overflow-y-auto no-scrollbar">
+                    <input type="text" id="sel-search" oninput="filterSel()" placeholder="Cerca un plat..." class="w-full p-4 bg-slate-50 border rounded-2xl font-bold focus:ring-2 focus:ring-orange-500 outline-none">
+                    <div class="max-h-[60vh] overflow-y-auto no-scrollbar pt-2">
                         ${itemsHtml}
                     </div>
                 </div>
             `);
+            
+            // Focus automàtic al cercador per anar ràpid
+            setTimeout(() => document.getElementById('sel-search')?.focus(), 100);
         };
 
-        window.addPlatMultiple = (f, t, n, el) => {
-            el.classList.add('bg-orange-100', 'border-orange-500');
-            setTimeout(() => el.classList.remove('bg-orange-100', 'border-orange-500'), 300);
+        window.addAndClose = (f, t, n, el) => {
+            // Visual feedback
+            el.classList.add('bg-orange-500', 'text-white', 'scale-95');
             
             const current = (allSelections[f] && Array.isArray(allSelections[f][t])) ? [...allSelections[f][t]] : [];
             current.push(n);
-            db.ref('seleccions').child(f).child(t).set(current);
-            showToast(`Afegit: ${n}`);
+            
+            db.ref('seleccions').child(f).child(t).set(current).then(() => {
+                closeModal();
+                showToast(`Afegit: ${n}`);
+            });
         };
 
         window.filterSel = () => {
