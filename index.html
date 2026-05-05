@@ -18,6 +18,7 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #f8fafc;
             padding-bottom: 120px;
+            scroll-behavior: smooth;
         }
 
         .day-card-dark {
@@ -33,7 +34,6 @@
             border: 3px solid transparent;
         }
 
-        /* Estil per al dia actual: vora doble i ombra */
         .today-card {
             border: 6px solid var(--primary) !important;
             background-color: var(--dark-today) !important;
@@ -143,10 +143,6 @@
             transition: transform 0.2s;
         }
 
-        .food-card:active {
-            transform: scale(0.98);
-        }
-
         .action-btn-circle {
             width: 36px;
             height: 36px;
@@ -231,22 +227,13 @@
                     <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-wider">Exportar Menú Setmanal</h3>
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold block ml-1">DES DE:</label>
-                        <input type="date" id="export-start" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">
+                        <input type="date" id="export-start" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold text-sm outline-none">
                     </div>
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold block ml-1">FINS A:</label>
-                        <input type="date" id="export-end" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500">
+                        <input type="date" id="export-end" class="w-full p-4 bg-slate-50 rounded-2xl border font-bold text-sm outline-none">
                     </div>
-                    <button onclick="exportMenuCSV()" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-orange-100 active:scale-95 transition-transform">DESCARREGAR MENÚ (CSV)</button>
-                </div>
-
-                <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="text-xl">📋</span>
-                        <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-wider">Còpia de Seguretat</h3>
-                    </div>
-                    <p class="text-[11px] font-medium text-slate-500 px-1 leading-relaxed">Baixa un fitxer amb totes les teves receptes, ingredients i mètodes de preparació.</p>
-                    <button onclick="exportAlimentsCSV()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-transform">EXPORTAR LLISTA ALIMENTS (CSV)</button>
+                    <button onclick="exportMenuCSV()" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black text-xs">DESCARREGAR MENÚ (CSV)</button>
                 </div>
             </div>
         </div>
@@ -277,12 +264,10 @@
         let allCaducitats = {};
 
         const suggeriments = [
-            { nom: "Faves a la Catalana", temps: "45 min", link: "https://www.bonviveur.es/recetas/habas-a-la-catalana", ingredients: "500g faves, cansalada, botifarra negra, ceba, menta.", metode: "Daurar la cansalada. Afegir faves i menta. Coure tapat a foc lent." },
-            { nom: "Arròs amb Verdures", temps: "30 min", link: "https://www.directoalpaladar.com/recetas-de-arroces/arroz-verduras-receta-saludable-facil-deliciosa", ingredients: "Arròs rodó, pebrot, ceba, pèsols, brou de verdura.", metode: "Fer sofregit, afegir arròs i brou calent. 18 minuts." },
-            { nom: "Bacallà amb Samfaina", temps: "35 min", link: "https://www.bonviveur.es/recetas/bacalao-con-samfaina", ingredients: "Bacallà dessalat, albergínia, carbassó, tomàquet.", metode: "Fregir el bacallà. Fer samfaina i coure tot junt 5 minuts." },
-            { nom: "Pollastre al Forn", temps: "60 min", link: "https://www.directoalpaladar.com/recetas-de-carnes-y-aves/pollo-al-horno-receta-facil", ingredients: "Pollastre, patates, ceba, vi blanc, romaní.", metode: "Tot a la safata del forn 200ºC durant 45-50 minuts." },
-            { nom: "Espinacs amb Pinyons", temps: "15 min", link: "https://www.bonviveur.es/recetas/espinacas-a-la-catalana", ingredients: "Espinacs frescos, pinyons, panses, all.", metode: "Saltejar l'all i els fruits secs. Afegir espinacs fins que baixin." },
-            { nom: "Crema de Carbassó", temps: "25 min", link: "https://www.directoalpaladar.com/recetas-de-legumbres-y-verduras/crema-de-calabacin-receta-facil", ingredients: "Carbassó, ceba, patata, formatgets o crema de llet.", metode: "Bullir la verdura i triturar amb el formatge." }
+            { nom: "Faves a la Catalana", temps: "45 min", link: "https://www.bonviveur.es/recetas/habas-a-la-catalana", ingredients: "500g faves, cansalada, botifarra negra.", metode: "Daurar la cansalada. Afegir faves i menta. Coure a foc lent." },
+            { nom: "Arròs amb Verdures", temps: "30 min", link: "https://www.directoalpaladar.com/recetas-de-arroces/arroz-verduras-receta-saludable-facil-deliciosa", ingredients: "Arròs, pebrot, ceba, pèsols.", metode: "Fer sofregit, afegir arròs i brou." },
+            { nom: "Bacallà amb Samfaina", temps: "35 min", link: "https://www.bonviveur.es/recetas/bacalao-con-samfaina", ingredients: "Bacallà, albergínia, carbassó.", metode: "Fregir el bacallà i afegir samfaina." },
+            { nom: "Pollastre al Forn", temps: "60 min", link: "https://www.directoalpaladar.com/recetas-de-carnes-y-aves/pollo-al-horno-receta-facil", ingredients: "Pollastre, patates, ceba.", metode: "Forn a 200ºC durant 45 min." }
         ];
 
         window.onload = initFirebase;
@@ -298,26 +283,34 @@
                 render();
             });
             db.ref('seleccions').on('value', s => { allSelections = s.val() || {}; render(); });
-            
             db.ref('aliments_caducitat').on('value', s => { 
                 allCaducitats = s.val() || {}; 
                 cleanExpiredCaducitats();
                 render(); 
             });
+
+            // Quan tot s'ha carregat inicialment, anem al dia d'avui
+            setTimeout(scrollToToday, 800);
+        }
+
+        function scrollToToday() {
+            const todayCard = document.querySelector('.today-card');
+            if (todayCard && activeTab === 'none') {
+                todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
 
         function cleanExpiredCaducitats() {
             const todayStr = new Date().toISOString().split('T')[0];
             Object.entries(allCaducitats).forEach(([id, item]) => {
-                if (item.caducitat < todayStr) {
-                    db.ref('aliments_caducitat').child(id).remove();
-                }
+                if (item.caducitat < todayStr) db.ref('aliments_caducitat').child(id).remove();
             });
         }
 
         function setTab(tab) {
             activeTab = (activeTab === tab) ? 'none' : tab;
             render();
+            if(activeTab === 'none') setTimeout(scrollToToday, 100);
         }
 
         function changeWeek(dir) {
@@ -344,10 +337,7 @@
         function renderCalendar() {
             const grid = document.getElementById('calendar-grid');
             if(!grid) return;
-            if(activeTab !== 'none') {
-                grid.innerHTML = "";
-                return;
-            }
+            if(activeTab !== 'none') { grid.innerHTML = ""; return; }
             grid.innerHTML = "";
             const today = new Date().toISOString().split('T')[0];
             const d = new Date();
@@ -396,7 +386,7 @@
             return p.map((n, i) => `
                 <div class="item-row">
                     <span class="text-sm font-bold recipe-card-text">${n}</span>
-                    <button onclick="removePlat('${fecha}','${tipo}',${i})" class="text-white/20 hover:text-red-400 ml-2 shrink-0">×</button>
+                    <button onclick="removePlat('${fecha}','${tipo}',${i})" class="text-white/20 hover:text-red-400 ml-2">×</button>
                 </div>
             `).join('');
         }
@@ -418,57 +408,24 @@
 
         function renderFoodGrid() {
             const grid = document.getElementById('main-grid');
-            const searchInput = document.getElementById('search-input');
+            const search = document.getElementById('search-input')?.value.toLowerCase() || "";
             if(!grid) return;
-            const search = searchInput ? searchInput.value.toLowerCase() : "";
             grid.innerHTML = "";
-            let filtered = allAliments.filter(a => (a && a.nom ? a.nom.toLowerCase() : "").includes(search));
-            
-            if(activeTab === 'favs') filtered = filtered.filter(a => a && a.fav);
-            if(activeTab === 'provar') filtered = filtered.filter(a => a && a.provar);
+            let filtered = allAliments.filter(a => (a.nom || "").toLowerCase().includes(search));
+            if(activeTab === 'favs') filtered = filtered.filter(a => a.fav);
+            if(activeTab === 'provar') filtered = filtered.filter(a => a.provar);
             
             filtered.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).forEach(a => {
                 const div = document.createElement('div');
                 div.className = "food-card cursor-pointer";
-                const isFav = !!a.fav;
-                const isProvar = !!a.provar;
-                const safeNom = (a.nom || '').replace(/'/g, "\\'");
-                const safeLink = (a.link || '').replace(/'/g, "\\'");
-                
                 div.innerHTML = `
                     <div class="flex items-center justify-between gap-4">
-                        <div class="action-btn-circle ${isFav ? 'active-heart' : ''}" onclick="toggleFav('${a.id}', ${!isFav}, event)">
-                            ${isFav ? '❤️' : '🤍'}
-                        </div>
+                        <div class="action-btn-circle ${a.fav ? 'active-heart' : ''}" onclick="toggleFav('${a.id}', ${!a.fav}, event)">${a.fav ? '❤️' : '🤍'}</div>
                         <div class="text-center flex-1" onclick="openEditById('${a.id}')">
-                            <div class="text-sm font-black leading-tight recipe-card-text">${a.nom || 'Sense nom'}</div>
+                            <div class="text-sm font-black leading-tight">${a.nom || 'Sense nom'}</div>
                         </div>
-                        <div class="action-btn-circle ${isProvar ? 'active-eyes' : ''}" onclick="toggleProvar('${a.id}', ${!isProvar}, event)">
-                            ${isProvar ? '👀' : '👁️'}
-                        </div>
+                        <div class="action-btn-circle ${a.provar ? 'active-eyes' : ''}" onclick="toggleProvar('${a.id}', ${!a.provar}, event)">${a.provar ? '👀' : '👁️'}</div>
                     </div>
-                    <div class="link-footer-btn" onclick="handleActionClick(event, '${safeLink}', '${safeNom}')">
-                        <span>${a.link ? '🔗 VEURE WEB' : '🔍 BUSCAR'}</span>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
-        }
-
-        function renderCadList() {
-            const grid = document.getElementById('cad-list-grid');
-            if(!grid) return;
-            grid.innerHTML = "";
-            const entries = Object.entries(allCaducitats).sort((a,b) => new Date(a[1].caducitat) - new Date(b[1].caducitat));
-            entries.forEach(([id, c]) => {
-                const div = document.createElement('div');
-                div.className = "bg-white p-4 rounded-2xl border shadow-sm flex justify-between items-center";
-                div.innerHTML = `
-                    <div class="flex-1 pr-4">
-                        <div class="font-black text-sm recipe-card-text">${c.nom}</div>
-                        <div class="text-[10px] font-bold text-red-500 uppercase">${c.caducitat}</div>
-                    </div>
-                    <button onclick="deleteCaducitat('${id}')" class="text-red-400 font-black text-xs px-3">ESBORRAR</button>
                 `;
                 grid.appendChild(div);
             });
@@ -477,27 +434,16 @@
         function renderDailySuggestion() {
             const container = document.getElementById('daily-suggestion-container');
             if (!container) return;
-            if (activeTab !== 'none') {
-                container.innerHTML = "";
-                return;
-            }
+            if (activeTab !== 'none') { container.innerHTML = ""; return; }
             const day = new Date().getDate();
             const recipe = suggeriments[day % suggeriments.length];
-            const safeNom = recipe.nom.replace(/'/g, "\\'");
-            const safeIng = recipe.ingredients.replace(/'/g, "\\'").replace(/\n/g, " ");
-            const safeMet = recipe.metode.replace(/'/g, "\\'").replace(/\n/g, " ");
-            const safeLnk = recipe.link.replace(/'/g, "\\'");
-
             container.innerHTML = `
                 <div class="seasonal-suggestion">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-[10px] font-black text-orange-600 bg-orange-200 px-2 py-1 rounded-lg">SUGGERIMENT DEL DIA 🌿</span>
-                        <span class="text-[10px] font-bold text-slate-500">⏱️ ${recipe.temps}</span>
-                    </div>
-                    <h3 class="text-lg font-black leading-tight mb-3">${recipe.nom}</h3>
+                    <span class="text-[10px] font-black text-orange-600 bg-orange-200 px-2 py-1 rounded-lg">SUGGERIMENT DEL DIA 🌿</span>
+                    <h3 class="text-lg font-black leading-tight mb-3 mt-2">${recipe.nom}</h3>
                     <div class="flex gap-2">
-                        <a href="${recipe.link}" target="_blank" class="flex-1 bg-white border border-amber-300 text-amber-700 py-3 rounded-xl text-center text-[11px] font-black">VEURE WEB</a>
-                        <button onclick="autoSaveSuggestion('${safeNom}', '${safeIng}', '${safeMet}', '${safeLnk}')" class="flex-1 bg-orange-500 text-white py-3 rounded-xl text-[11px] font-black shadow-md">DESAR ＋</button>
+                        <a href="${recipe.link}" target="_blank" class="flex-1 bg-white border border-amber-300 py-3 rounded-xl text-center text-[11px] font-black">VEURE WEB</a>
+                        <button onclick="autoSaveSuggestion('${recipe.nom.replace(/'/g, "\\'")}', '', '', '${recipe.link}')" class="flex-1 bg-orange-500 text-white py-3 rounded-xl text-[11px] font-black">DESAR ＋</button>
                     </div>
                 </div>
             `;
@@ -510,242 +456,83 @@
             });
         }
 
-        window.saveCaducitat = () => {
-            const nom = document.getElementById('cad-nom').value;
-            const data = document.getElementById('cad-data').value;
-            if(!nom || !data) return;
-            db.ref('aliments_caducitat').push({ nom, caducitat: data }).then(() => {
-                document.getElementById('cad-nom').value = "";
-                document.getElementById('cad-data').value = "";
-                showToast("Afegit correctament");
+        function showToast(txt) {
+            const t = document.getElementById('toast');
+            t.innerText = txt;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
+        }
+
+        function showModal(content) {
+            const container = document.getElementById('modal-container');
+            const inner = document.getElementById('modal-content');
+            inner.innerHTML = content;
+            container.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').classList.add('hidden');
+        }
+
+        function closeModalExtern(e) {
+            if(e.target.id === 'modal-container') closeModal();
+        }
+
+        window.openSelector = (f, t) => {
+            const itemsHtml = allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).map(a => `
+                <div onclick="addAndClose('${f}','${t}','${a.nom.replace(/'/g, "\\'")}')" class="p-4 bg-slate-50 rounded-xl font-bold cursor-pointer hover:bg-orange-50 mb-2">
+                    ${a.nom}
+                </div>
+            `).join('');
+
+            showModal(`
+                <div class="p-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-black">ESCULL PLAT</h2>
+                        <button onclick="closeModal()" class="text-slate-400 text-2xl font-bold">×</button>
+                    </div>
+                    <div class="max-h-[60vh] overflow-y-auto no-scrollbar">${itemsHtml}</div>
+                </div>
+            `);
+        };
+
+        window.addAndClose = (f, t, n) => {
+            const current = (allSelections[f] && Array.isArray(allSelections[f][t])) ? allSelections[f][t] : [];
+            current.push(n);
+            db.ref('seleccions').child(f).child(t).set(current).then(() => {
+                closeModal();
+                showToast("Afegit!");
             });
         };
 
-        window.deleteCaducitat = (id, silent = false) => {
-            if (silent || confirm("Eliminar caducitat?")) {
-                db.ref('aliments_caducitat').child(id).remove().then(() => {
-                    if(silent) showToast("Caducitat eliminada");
-                });
-            }
+        window.removePlat = (f, t, idx) => {
+            const current = allSelections[f][t];
+            current.splice(idx, 1);
+            db.ref('seleccions').child(f).child(t).set(current);
         };
 
-        window.toggleFav = (id, val, e) => {
-            if(e) e.stopPropagation();
-            db.ref('aliments').child(id).update({ fav: val });
+        window.toggleFav = (id, v, e) => { if(e) e.stopPropagation(); db.ref('aliments').child(id).update({ fav: v }); };
+        window.toggleProvar = (id, v, e) => { if(e) e.stopPropagation(); db.ref('aliments').child(id).update({ provar: v }); };
+        
+        window.autoSaveSuggestion = (n, i, m, l) => {
+            db.ref('aliments').push({ nom: n, ingredients: i, metode: m, link: l, fav: false, provar: true })
+              .then(() => showToast("Guardat!"));
         };
 
-        window.toggleProvar = (id, val, e) => {
-            if(e) e.stopPropagation();
-            db.ref('aliments').child(id).update({ provar: val });
-        };
-
-        window.autoSaveSuggestion = (nom, ing, met, lnk) => {
-            const data = {
-                nom, ingredients: ing || '', metode: met || '', link: lnk || '', fav: false, provar: true
-            };
-            db.ref('aliments').push(data).then(() => { showToast("Recepta guardada!"); });
-        };
-
-        window.openCreateAliment = (nom, ing, met, lnk) => {
+        window.openCreateAliment = () => {
             showModal(`
-                <div class="p-8 space-y-6">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-black">Nova Recepta</h2>
-                        <button onclick="closeModal()" class="text-slate-400 text-2xl">×</button>
-                    </div>
-                    <div class="space-y-4">
-                        <input id="new-nom" value="${nom || ''}" placeholder="Quin plat és?" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold">
-                        <textarea id="new-ing" placeholder="Ingredients..." class="w-full p-4 bg-slate-50 border rounded-2xl h-32 font-bold text-sm">${ing || ''}</textarea>
-                        <textarea id="new-met" placeholder="Com es prepara?" class="w-full p-4 bg-slate-50 border rounded-2xl h-32 font-bold text-sm">${met || ''}</textarea>
-                        <input id="new-link" type="url" value="${lnk || ''}" placeholder="Link web" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
-                    </div>
-                    <button onclick="saveNew()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black">CREAR RECEPTA</button>
+                <div class="p-8 space-y-4">
+                    <h2 class="text-xl font-black">Nova Recepta</h2>
+                    <input id="new-nom" placeholder="Nom del plat" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold">
+                    <button onclick="saveNew()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black">CREAR</button>
                 </div>
             `);
         };
 
         window.saveNew = () => {
-            const nomInput = document.getElementById('new-nom');
-            if(!nomInput || !nomInput.value) return showToast("Falta el nom");
-            const data = {
-                nom: nomInput.value,
-                ingredients: document.getElementById('new-ing').value || '',
-                metode: document.getElementById('new-met').value || '',
-                link: document.getElementById('new-link').value || '',
-                fav: false, provar: true
-            };
-            db.ref('aliments').push(data).then(() => { closeModal(); showToast("Recepta guardada!"); });
-        };
-
-        window.openEditById = (id) => {
-            const a = allAliments.find(item => item.id === id);
-            if(a) openEdit(a);
-        };
-
-        window.openEdit = (a) => {
-            showModal(`
-                <div class="p-8 space-y-6">
-                    <div class="flex justify-between items-start">
-                        <h2 class="text-xl font-black recipe-card-text">${a.nom || 'Sense nom'}</h2>
-                        <div class="flex gap-3">
-                            <button onclick="toggleFav('${a.id}', ${!a.fav})">${a.fav ? '❤️' : '🤍'}</button>
-                            <button onclick="closeModal()" class="text-slate-400 text-2xl">×</button>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <textarea id="edit-ing" class="w-full p-4 bg-slate-50 border rounded-2xl h-24 text-sm font-bold">${a.ingredients || ''}</textarea>
-                        <textarea id="edit-met" class="w-full p-4 bg-slate-50 border rounded-2xl h-32 text-sm font-bold">${a.metode || ''}</textarea>
-                        <input id="edit-link" type="url" value="${a.link || ''}" class="w-full p-4 bg-slate-50 border rounded-2xl text-sm font-bold">
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="updateRecepta('${a.id}')" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black">DESAR</button>
-                        <button onclick="deleteRecepta('${a.id}')" class="px-6 bg-red-100 text-red-500 rounded-2xl">🗑️</button>
-                    </div>
-                </div>
-            `);
-        };
-
-        window.updateRecepta = (id) => {
-            const upd = {
-                ingredients: document.getElementById('edit-ing').value,
-                metode: document.getElementById('edit-met').value,
-                link: document.getElementById('edit-link').value
-            };
-            db.ref('aliments').child(id).update(upd).then(() => { closeModal(); showToast("Actualitzat"); });
-        };
-
-        window.deleteRecepta = (id) => {
-            if(confirm("Eliminar recepta?")) {
-                db.ref('aliments').child(id).remove().then(() => { closeModal(); showToast("Eliminada"); });
-            }
-        };
-
-        window.openSelector = (f, t) => {
-            const itemsHtml = allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).map(a => {
-                const safeNom = (a.nom || '').replace(/'/g, "\\'");
-                return `
-                    <div onclick="addAndClose('${f}','${t}','${safeNom}', this)" class="sel-item p-4 bg-slate-50 rounded-xl font-bold cursor-pointer hover:bg-orange-50 border transition-colors mb-2" data-name="${safeNom}">
-                        ${a.nom || 'Sense nom'}
-                    </div>
-                `;
-            }).join('');
-
-            showModal(`
-                <div class="p-8 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-black">ESCULL PLAT</h2>
-                        <button onclick="closeModal()" class="text-slate-400 text-2xl font-bold">×</button>
-                    </div>
-                    <input type="text" id="sel-search" oninput="filterSel()" placeholder="Cerca un plat..." class="w-full p-4 bg-slate-50 border rounded-2xl font-bold focus:ring-2 focus:ring-orange-500 outline-none">
-                    <div class="max-h-[60vh] overflow-y-auto no-scrollbar pt-2">
-                        ${itemsHtml}
-                    </div>
-                </div>
-            `);
-            
-            setTimeout(() => document.getElementById('sel-search')?.focus(), 100);
-        };
-
-        window.addAndClose = (f, t, n, el) => {
-            el.classList.add('bg-orange-500', 'text-white', 'scale-95');
-            const current = (allSelections[f] && Array.isArray(allSelections[f][t])) ? [...allSelections[f][t]] : [];
-            current.push(n);
-            db.ref('seleccions').child(f).child(t).set(current).then(() => {
-                closeModal();
-                showToast(`Afegit: ${n}`);
-            });
-        };
-
-        window.filterSel = () => {
-            const searchInput = document.getElementById('sel-search');
-            if(!searchInput) return;
-            const q = searchInput.value.toLowerCase();
-            document.querySelectorAll('.sel-item').forEach(i => {
-                i.style.display = i.dataset.name.toLowerCase().includes(q) ? 'block' : 'none';
-            });
-        };
-
-        window.removePlat = (f, t, i) => {
-            if(!allSelections[f] || !allSelections[f][t]) return;
-            const p = [...allSelections[f][t]];
-            p.splice(i, 1);
-            db.ref('seleccions').child(f).child(t).set(p);
-        };
-
-        window.exportMenuCSV = () => {
-            const startStr = document.getElementById('export-start').value;
-            const endStr = document.getElementById('export-end').value;
-            if(!startStr || !endStr) return showToast("Tria dates");
-            let csv = "Data,Dinar,Sopar\n";
-            let cur = new Date(startStr);
-            let end = new Date(endStr);
-            while(cur <= end) {
-                const iso = cur.toISOString().split('T')[0];
-                const dinar = (allSelections[iso]?.comida || []).join(' | ');
-                const sopar = (allSelections[iso]?.cena || []).join(' | ');
-                csv += `${iso},"${dinar}","${sopar}"\n`;
-                cur.setDate(cur.getDate() + 1);
-            }
-            downloadCSV(csv, `menu_${startStr}_${endStr}.csv`);
-        };
-
-        window.exportAlimentsCSV = () => {
-            if (!allAliments.length) return showToast("No hi ha aliments per exportar");
-            let csv = "Nom,Ingredients,Metode,Link,Preferit,Per Provar\n";
-            allAliments.sort((a,b) => (a.nom || "").localeCompare(b.nom || "")).forEach(a => {
-                const nom = (a.nom || "").replace(/"/g, '""');
-                const ing = (a.ingredients || "").replace(/"/g, '""').replace(/\n/g, ' ');
-                const met = (a.metode || "").replace(/"/g, '""').replace(/\n/g, ' ');
-                const link = (a.link || "").replace(/"/g, '""');
-                const fav = a.fav ? "SÍ" : "NO";
-                const provar = a.provar ? "SÍ" : "NO";
-                csv += `"${nom}","${ing}","${met}","${link}","${fav}","${provar}"\n`;
-            });
-            const timestamp = new Date().toISOString().split('T')[0];
-            downloadCSV(csv, `llista_receptes_${timestamp}.csv`);
-        };
-
-        function downloadCSV(content, filename) {
-            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", filename);
-            link.click();
-        }
-
-        window.showModal = (html) => {
-            const m = document.getElementById('modal-container');
-            const c = document.getElementById('modal-content');
-            if(c) c.innerHTML = html;
-            if(m) m.classList.remove('hidden');
-        };
-
-        window.closeModal = () => {
-            const m = document.getElementById('modal-container');
-            if(m) m.classList.add('hidden');
-        };
-        
-        window.closeModalExtern = (e) => {
-            if(e.target.id === 'modal-container') closeModal();
-        }
-
-        window.showToast = (msg) => {
-            const t = document.getElementById('toast');
-            if(!t) return;
-            t.innerText = msg;
-            t.style.display = 'block';
-            setTimeout(() => t.style.display = 'none', 1500);
-        };
-
-        window.handleActionClick = (e, link, query) => {
-            e.stopPropagation();
-            if (link) {
-                window.open(link, '_blank');
-            } else {
-                const cleanQuery = query.replace(/['"]+/g, '');
-                const googleSearchUrl = `https://www.google.com/search?q=recepta+${encodeURIComponent(cleanQuery)}`;
-                window.open(googleSearchUrl, '_blank');
-            }
+            const n = document.getElementById('new-nom').value;
+            if(!n) return;
+            db.ref('aliments').push({ nom: n, fav: false, provar: true }).then(() => { closeModal(); showToast("Creat!"); });
         };
     </script>
 </body>
