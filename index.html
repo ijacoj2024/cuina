@@ -33,7 +33,6 @@
             border: 3px solid transparent;
         }
 
-        /* Estil per al dia actual: vora doble i ombra */
         .today-card {
             border: 6px solid var(--primary) !important;
             background-color: var(--dark-today) !important;
@@ -275,6 +274,7 @@
         let allAliments = [];
         let allSelections = {};
         let allCaducitats = {};
+        let hasScrolledToToday = false; // ← NOU: controla que el scroll només passi un cop
 
         const suggeriments = [
             { nom: "Faves a la Catalana", temps: "45 min", link: "https://www.bonviveur.es/recetas/habas-a-la-catalana", ingredients: "500g faves, cansalada, botifarra negra, ceba, menta.", metode: "Daurar la cansalada. Afegir faves i menta. Coure tapat a foc lent." },
@@ -322,6 +322,8 @@
 
         function changeWeek(dir) {
             offset += dir;
+            // ← NOU: si tornem a la setmana actual, permet fer scroll de nou al dia d'avui
+            if (offset === 0) hasScrolledToToday = false;
             render();
         }
 
@@ -388,6 +390,17 @@
                     </div>
                 `;
                 grid.appendChild(card);
+            }
+
+            // ← NOU: scroll automàtic al dia d'avui només la primera vegada
+            if (!hasScrolledToToday) {
+                const todayCard = grid.querySelector('.today-card');
+                if (todayCard) {
+                    setTimeout(() => {
+                        todayCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        hasScrolledToToday = true;
+                    }, 150);
+                }
             }
         }
 
