@@ -217,7 +217,6 @@
                 <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-100">
                     <h3 class="font-black text-xs text-slate-400 uppercase mb-4">Nova Caducitat</h3>
                     <input type="text" id="cad-nom" list="aliments-suggerits" placeholder="Què caduca?" autocomplete="off" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border mb-2 outline-none">
-                    <datalist id="aliments-suggerits"></datalist>
                     <div class="flex gap-2">
                         <input type="date" id="cad-data" class="flex-1 p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
                         <button onclick="saveCaducitat()" class="bg-orange-500 text-white px-6 rounded-2xl font-black text-xs">DESAR</button>
@@ -317,10 +316,15 @@
             // NOU: escolta els noms guardats a caducitats i omple el datalist
             db.ref('suggeriments_caducitat').on('value', s => {
                 const vals = s.val() || {};
-                const dl = document.getElementById('aliments-suggerits');
-                if (!dl) return;
-                const noms = [...new Set(Object.values(vals))].sort();
-                dl.innerHTML = noms.map(n => `<option value="${n}">`).join('');
+                const noms = Object.values(vals).sort();
+                const opcions = noms.map(n => `<option value="${n}">`).join('');
+                // El datalist sempre és al DOM ara, però esperem el render per si de cas
+                const tryFill = () => {
+                    const dl = document.getElementById('aliments-suggerits');
+                    if (dl) { dl.innerHTML = opcions; }
+                    else { setTimeout(tryFill, 200); }
+                };
+                tryFill();
             });
         }
 
@@ -550,10 +554,9 @@
             const data = document.getElementById('cad-data').value;
             if(!nom || !data) return;
             db.ref('aliments_caducitat').push({ nom, caducitat: data }).then(() => {
-                // NOU: desa el nom com a suggeriment futur si no existeix ja
-                db.ref('suggeriments_caducitat').orderByValue().equalTo(nom).once('value', s => {
-                    if (!s.exists()) db.ref('suggeriments_caducitat').push(nom);
-                });
+                // NOU: desa el nom com a clau (evita duplicats automàticament)
+                const clau = nom.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                db.ref('suggeriments_caducitat').child(clau).set(nom);
                 document.getElementById('cad-nom').value = "";
                 document.getElementById('cad-data').value = "";
                 showToast("Afegit correctament");
@@ -787,5 +790,6 @@
             }
         };
     </script>
+    <datalist id="aliments-suggerits"></datalist>
 </body>
 </html>
