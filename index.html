@@ -294,36 +294,12 @@
             { nom: "Crema de Carbassó", temps: "25 min", link: "https://www.directoalpaladar.com/recetas-de-legumbres-y-verduras/crema-de-calabacin-receta-facil", ingredients: "Carbassó, ceba, patata, formatgets o crema de llet.", metode: "Bullir la verdura i triturar amb el formatge." }
         ];
 
-        // ← NOU: llista d'aliments que caduquen habitualment
-        const alimentsCaducitat = [
-            "Llet", "Llet vegetal", "Iogurt", "Iogurt grec", "Formatge fresc", "Formatge tallat",
-            "Mantequilla", "Nata", "Crema de llet", "Ou", "Ous",
-            "Pollastre", "Pit de pollastre", "Cuixes de pollastre", "Gall dindi", "Hamburguesa",
-            "Carn picada", "Bistec", "Llom de porc", "Costelles", "Botifarra", "Pernil dolç",
-            "Pernil salat", "Fuet", "Xoriço", "Bacó", "Salmó", "Tonyina fresca", "Bacallà",
-            "Gambes", "Musclos", "Rap",
-            "Tofu", "Hummus", "Guacamole",
-            "Enciam", "Espinacs", "Rúcula", "Tomàquet", "Carbassó", "Albergínia", "Pebrot",
-            "Pastanaga", "Api", "Bròquil", "Coliflor", "Mongetes verdes", "Pèsols", "Faves",
-            "Maduixes", "Gerds", "Mango", "Alvocat", "Llimona", "Taronja",
-            "Suc de taronja", "Suc de poma", "Caldo de pollastre", "Caldo de verdures",
-            "Pasta fresca", "Pizza fresca", "Lasanya fresca",
-            "Mantequilla de cacauet", "Melmelada", "Mostassa", "Maionesa", "Ketchup"
-        ];
-
-        function populateDatalist() {
-            const dl = document.getElementById('aliments-suggerits');
-            if (!dl) return;
-            dl.innerHTML = alimentsCaducitat.map(a => `<option value="${a}">`).join('');
-        }
-
         window.onload = initFirebase;
 
         function initFirebase() {
             const config = { databaseURL: "https://calendari-menjars-default-rtdb.europe-west1.firebasedatabase.app" };
             if (!firebase.apps.length) firebase.initializeApp(config);
             db = firebase.database();
-            populateDatalist(); // ← NOU: omple el datalist en carregar
             
             db.ref('aliments').on('value', s => {
                 const val = s.val() || {};
@@ -336,6 +312,15 @@
                 allCaducitats = s.val() || {}; 
                 cleanExpiredCaducitats();
                 render(); 
+            });
+
+            // NOU: escolta els noms guardats a caducitats i omple el datalist
+            db.ref('suggeriments_caducitat').on('value', s => {
+                const vals = s.val() || {};
+                const dl = document.getElementById('aliments-suggerits');
+                if (!dl) return;
+                const noms = [...new Set(Object.values(vals))].sort();
+                dl.innerHTML = noms.map(n => `<option value="${n}">`).join('');
             });
         }
 
@@ -561,10 +546,14 @@
         }
 
         window.saveCaducitat = () => {
-            const nom = document.getElementById('cad-nom').value;
+            const nom = document.getElementById('cad-nom').value.trim();
             const data = document.getElementById('cad-data').value;
             if(!nom || !data) return;
             db.ref('aliments_caducitat').push({ nom, caducitat: data }).then(() => {
+                // NOU: desa el nom com a suggeriment futur si no existeix ja
+                db.ref('suggeriments_caducitat').orderByValue().equalTo(nom).once('value', s => {
+                    if (!s.exists()) db.ref('suggeriments_caducitat').push(nom);
+                });
                 document.getElementById('cad-nom').value = "";
                 document.getElementById('cad-data').value = "";
                 showToast("Afegit correctament");
