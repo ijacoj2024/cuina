@@ -17,7 +17,7 @@
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #f8fafc;
-            padding-bottom: 120px;
+            padding-bottom: 160px;
         }
 
         .day-card-dark {
@@ -185,22 +185,6 @@
             margin-bottom: 2rem;
         }
 
-        .suggestion-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 10px;
-        }
-
-        .suggestion-badge {
-            font-size: 10px;
-            font-weight: 800;
-            padding: 4px 8px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.75);
-            color: #92400e;
-        }
-
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -232,7 +216,8 @@
             <div id="caducitat-tab-content" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-100">
                     <h3 class="font-black text-xs text-slate-400 uppercase mb-4">Nova Caducitat</h3>
-                    <input type="text" id="cad-nom" placeholder="Què caduca?" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border mb-2 outline-none">
+                    <input type="text" id="cad-nom" list="aliments-suggerits" placeholder="Què caduca?" autocomplete="off" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border mb-2 outline-none">
+                    <datalist id="aliments-suggerits"></datalist>
                     <div class="flex gap-2">
                         <input type="date" id="cad-data" class="flex-1 p-4 bg-slate-50 rounded-2xl font-bold border outline-none">
                         <button onclick="saveCaducitat()" class="bg-orange-500 text-white px-6 rounded-2xl font-black text-xs">DESAR</button>
@@ -266,13 +251,21 @@
             </div>
         </div>
 
-        <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t p-4 flex justify-around items-center z-50">
-            <button onclick="setTab('all')" id="btn-all" class="p-3 text-xl rounded-2xl transition-all">📂</button>
-            <button onclick="setTab('favs')" id="btn-favs" class="p-3 text-xl rounded-2xl transition-all">❤️</button>
-            <button onclick="setTab('provar')" id="btn-provar" class="p-3 text-xl rounded-2xl transition-all">👀</button>
-            <button onclick="openCreateAliment('', '', '', '')" class="bg-orange-500 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center text-xl hover:scale-110 transition-transform">＋</button>
-            <button onclick="setTab('caducitat')" id="btn-caducitat" class="p-3 text-xl rounded-2xl transition-all">⌛</button>
-            <button onclick="setTab('export')" id="btn-export" class="p-3 text-xl rounded-2xl transition-all">📊</button>
+        <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t z-50 flex flex-col">
+            <!-- NOU: navegador de setmana al peu -->
+            <div id="bottom-week-nav" class="flex items-center justify-center gap-4 px-4 pt-3 pb-1">
+                <button onclick="changeWeek(-1)" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 font-bold text-slate-600">&#8249;</button>
+                <span id="rango-fechas-bottom" class="text-sm font-black text-slate-700 min-w-[140px] text-center">...</span>
+                <button onclick="changeWeek(1)" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 font-bold text-slate-600">&#x3009;</button>
+            </div>
+            <div class="flex justify-around items-center p-3">
+                <button onclick="setTab('all')" id="btn-all" class="p-3 text-xl rounded-2xl transition-all">📂</button>
+                <button onclick="setTab('favs')" id="btn-favs" class="p-3 text-xl rounded-2xl transition-all">❤️</button>
+                <button onclick="setTab('provar')" id="btn-provar" class="p-3 text-xl rounded-2xl transition-all">👀</button>
+                <button onclick="openCreateAliment('', '', '', '')" class="bg-orange-500 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center text-xl hover:scale-110 transition-transform">＋</button>
+                <button onclick="setTab('caducitat')" id="btn-caducitat" class="p-3 text-xl rounded-2xl transition-all">⌛</button>
+                <button onclick="setTab('export')" id="btn-export" class="p-3 text-xl rounded-2xl transition-all">📊</button>
+            </div>
         </div>
     </div>
 
@@ -292,116 +285,36 @@
         let allCaducitats = {};
         let hasScrolledToToday = false; // ← NOU: controla que el scroll només passi un cop
 
-        const SUGGERIMENT_CRITERIS = { persones: 4, minutsMax: 35, economia: true };
-
-        const suggerimentsCatalog = [
-            { nom: "Crema de porros", minuts: 30, persones: 4, economia: true, mesos: [11, 12, 1, 2], link: "https://www.bonviveur.es/recetas/crema-de-puerros", ingredients: "4 porros, 2 patates, 1 ceba, 1 l de brou de verdures, oli i sal.", metode: "Sofregir la ceba i els porros, afegir patata i brou, coure 20 min i triturar." },
-            { nom: "Llenties amb verdures", minuts: 30, persones: 4, economia: true, mesos: [1, 2, 11, 12], link: "", ingredients: "400 g de llenties, 2 pastanagues, 1 ceba, 2 tomàquets, comí i llorer.", metode: "Sofregit de verdures, afegir llenties i aigua, coure 25 min a foc mitjà." },
-            { nom: "Sopa de minestra", minuts: 25, persones: 4, economia: true, mesos: [12, 1, 2, 3], link: "", ingredients: "Pastanaga, api, ceba, patata, fideus fins, brou de verdures.", metode: "Coure el sofregit i les verdures, afegir fideus els darrers 8 minuts." },
-            { nom: "Truita de patates", minuts: 25, persones: 4, economia: true, mesos: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], link: "https://www.bonviveur.es/recetas/tortilla-de-patatas", ingredients: "6 ous, 4 patates mitjanes, 1 ceba, oli d'oliva i sal.", metode: "Daurar patata i ceba, barrejar amb ous batuts i coure per ambdues bandes." },
-            { nom: "Macarrons amb tomàquet i tonyina", minuts: 20, persones: 4, economia: true, mesos: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], link: "", ingredients: "400 g de macarrons, 2 llaunes de tonyina, 400 g de tomàquet triturat, all.", metode: "Coure la pasta, fer sofregit de tomàquet i afegir la tonyina escorreguda." },
-            { nom: "Crema de coliflor", minuts: 30, persones: 4, economia: true, mesos: [11, 12, 1, 2], link: "https://www.bonviveur.es/recetas/crema-de-coliflor", ingredients: "1 coliflor, 1 patata, 1 ceba, 1 l de brou, llet o nata.", metode: "Coure tot el brou, triturar fins a textura cremosa i rectificar de sal." },
-            { nom: "Arròs amb xampinyons", minuts: 30, persones: 4, economia: true, mesos: [10, 11, 12, 1, 2], link: "", ingredients: "320 g d'arròs, 400 g de xampinyons, ceba, all, brou calent.", metode: "Saltar els bolets, afegir arròs i anar incorporant brou fins que quedi cremós." },
-            { nom: "Mongetes amb tomàquet", minuts: 25, persones: 4, economia: true, mesos: [10, 11, 12, 1], link: "", ingredients: "2 llaunes de mongetes, 3 tomàquets madurs, 1 ceba, pebre vermell.", metode: "Sofregit de ceba i tomàquet, afegir mongetes escorregudes i coure 10 min." },
-
-            { nom: "Espinacs a la catalana", minuts: 15, persones: 4, economia: true, mesos: [2, 3, 4, 5, 10, 11], link: "https://www.bonviveur.es/recetas/espinacas-a-la-catalana", ingredients: "1 kg d'espinacs, pinyons, panses, 2 grans d'all, oli.", metode: "Daurar all, pinyons i panses; afegir espinacs fins que s'abandonin." },
-            { nom: "Arròs amb verdures", minuts: 30, persones: 4, economia: true, mesos: [3, 4, 5, 6, 9, 10], link: "https://www.bonviveur.es/recetas/arroz-con-verduras", ingredients: "320 g d'arròs, pebrot, ceba, pastanaga, pèsols, brou de verdura.", metode: "Sofregit de verdures, afegir arròs i brou calent; coure 18 min tapat." },
-            { nom: "Crema de carbassó", minuts: 25, persones: 4, economia: true, mesos: [5, 6, 7, 8, 9], link: "https://www.bonviveur.es/recetas/crema-de-calabacin", ingredients: "3 carbassons, 1 patata, 1 ceba, brou, formatge tou.", metode: "Coure la verdura, triturar i acabar amb una mica de formatge." },
-            { nom: "Truita d'espinacs", minuts: 20, persones: 4, economia: true, mesos: [3, 4, 5], link: "", ingredients: "6 ous, 300 g d'espinacs, 1 ceba petita, oli i sal.", metode: "Saltar espinacs amb ceba, barrejar amb ous i fer truita grossa." },
-            { nom: "Pèsols amb ous", minuts: 25, persones: 4, economia: true, mesos: [3, 4, 5], link: "", ingredients: "500 g de pèsols, 4 ous, 1 ceba, pernil ibèric opcional.", metode: "Coure pèsols amb ceba, afegir ous escalfats i deixar quallar 5 min." },
-            { nom: "Amanida de cigrons", minuts: 15, persones: 4, economia: true, mesos: [3, 4, 5, 6], link: "", ingredients: "2 llaunes de cigrons, ceba, tomàquet, pebre, olives, oli i vinagre.", metode: "Barrejar ingredients, deixar reposar 10 min i servir fresca." },
-            { nom: "Fideuà de verdures", minuts: 30, persones: 4, economia: true, mesos: [4, 5, 6, 9], link: "", ingredients: "300 g de fideus gruixuts, albergínia, carbassó, pebrot, brou.", metode: "Sofregit de verdures, torrar fideus, afegir brou i coure sense remenar." },
-            { nom: "Alcachofas a la planxa", minuts: 25, persones: 4, economia: true, mesos: [3, 4, 5], link: "", ingredients: "8 carxofes, llimona, all, julivert, oli d'oliva.", metode: "Coure carxofes a la planxa amb oli, all i llimona fins que estiguin tendres." },
-
-            { nom: "Gazpacho andalús", minuts: 15, persones: 4, economia: true, mesos: [6, 7, 8, 9], link: "https://www.bonviveur.es/recetas/gazpacho-andaluz", ingredients: "1 kg de tomàquet, 1 pebrot, 1 cogombre, pa sec, oli i vinagre.", metode: "Triturar tot, colar si cal, i servir ben fred amb guarnició." },
-            { nom: "Amanida de llenties", minuts: 20, persones: 4, economia: true, mesos: [6, 7, 8], link: "https://www.bonviveur.es/recetas/ensalada-de-lentejas", ingredients: "400 g de llenties cuitas, tomàquet, cogombre, ceba, vinagreta.", metode: "Barrejar llenties amb verdures tallades i amanir amb oli i vinagre." },
-            { nom: "Pasta amb tomàquet i alfàbrega", minuts: 25, persones: 4, economia: true, mesos: [6, 7, 8, 9], link: "", ingredients: "400 g de pasta, 600 g de tomàquet madur, all, alfàbrega, oli.", metode: "Coure la pasta; sofregit ràpid de tomàquet i muntar amb alfàbrega fresca." },
-            { nom: "Truita de carbassó", minuts: 20, persones: 4, economia: true, mesos: [6, 7, 8, 9], link: "", ingredients: "2 carbassons, 6 ous, 1 ceba, oli i sal.", metode: "Ratllar carbassó, saltar amb ceba, afegir ous i fer truita." },
-            { nom: "Salmorejo cordobès", minuts: 15, persones: 4, economia: true, mesos: [7, 8, 9], link: "https://www.bonviveur.es/recetas/salmorejo-cordobes", ingredients: "1 kg de tomàquet, pa dur, 2 ous durs, oli d'oliva, all.", metode: "Triturar tomàquet, pa i all; servir amb ou dur i pernil esmicolat." },
-            { nom: "Escalivada amb ou", minuts: 30, persones: 4, economia: true, mesos: [7, 8, 9, 10], link: "https://www.bonviveur.es/recetas/escalivada", ingredients: "2 albergínies, 2 pebrots, 4 ous, all, oli d'oliva.", metode: "Escalivar verdures al forn o planxa, pelar, amanir i servir amb ou dur." },
-            { nom: "Amanida de patata", minuts: 25, persones: 4, economia: true, mesos: [6, 7, 8], link: "", ingredients: "6 patates, 4 ous, ceba, olives, maionesa lleugera o vinagreta.", metode: "Coure patata i ou, tallar, amanir i refrigerar abans de servir." },
-            { nom: "Arròs amb tomàquet", minuts: 30, persones: 4, economia: true, mesos: [6, 7, 8, 9], link: "", ingredients: "320 g d'arròs, 500 g de tomàquet, all, oli, sal.", metode: "Sofregit de tomàquet, afegir arròs i brou; coure tapat fins quedar solt." },
-
-            { nom: "Crema de carbassa", minuts: 30, persones: 4, economia: true, mesos: [9, 10, 11], link: "https://www.bonviveur.es/recetas/crema-de-calabaza", ingredients: "800 g de carbassa, 1 patata, ceba, brou, nou moscada.", metode: "Coure la verdura en brou, triturar i acabar amb una mica de nata." },
-            { nom: "Bacallà amb samfaina", minuts: 35, persones: 4, economia: true, mesos: [9, 10, 11, 12], link: "https://www.bonviveur.es/recetas/bacalao-con-samfaina", ingredients: "4 llonzes de bacallà, albergínia, carbassó, tomàquet, pebrot.", metode: "Daurar el peix; fer samfaina amb verdures de temporada i coure 5 min junts." },
-            { nom: "Arròs amb bolets", minuts: 30, persones: 4, economia: true, mesos: [9, 10, 11], link: "", ingredients: "320 g d'arròs, 400 g de bolets variats, all, julivert, brou.", metode: "Saltar bolets, afegir arròs i brou calent; reposar 2 min abans de servir." },
-            { nom: "Mongetes amb botifarra", minuts: 30, persones: 4, economia: true, mesos: [10, 11], link: "", ingredients: "400 g de mongetes seques, 2 botifarras, 1 ceba, llorer.", metode: "Coure mongetes amb ceba; daurar botifarra a trossos i muntar al plat." },
-            { nom: "Sopa de ceba", minuts: 30, persones: 4, economia: true, mesos: [10, 11, 12, 1], link: "", ingredients: "6 cebes grans, brou, pa torrat, formatge ratllat.", metode: "Caramel·litzar cebes, afegir brou i coure 20 min; servir amb pa i formatge." },
-            { nom: "Truita de carbassa", minuts: 25, persones: 4, economia: true, mesos: [9, 10, 11], link: "", ingredients: "300 g de carbassa ratllada, 6 ous, ceba, sal i oli.", metode: "Saltar carbassa amb ceba, afegir ous i coure truita grossa per families." },
-            { nom: "Cigrons amb espinacs", minuts: 30, persones: 4, economia: true, mesos: [10, 11, 12, 1, 2], link: "", ingredients: "400 g de cigrons, 500 g d'espinacs, all, comí, pa ratllat.", metode: "Saltar all i comí, afegir cigrons i espinacs fins que baixin." },
-            { nom: "Macarrons amb verdures al forn", minuts: 35, persones: 4, economia: true, mesos: [9, 10, 11], link: "", ingredients: "400 g de macarrons, carbassó, pebrot, tomàquet, formatge ratllat.", metode: "Coure pasta al dente, barrejar amb verdures saltejades i gratinar 10 min." }
+        const suggeriments = [
+            { nom: "Faves a la Catalana", temps: "45 min", link: "https://www.bonviveur.es/recetas/habas-a-la-catalana", ingredients: "500g faves, cansalada, botifarra negra, ceba, menta.", metode: "Daurar la cansalada. Afegir faves i menta. Coure tapat a foc lent." },
+            { nom: "Arròs amb Verdures", temps: "30 min", link: "https://www.directoalpaladar.com/recetas-de-arroces/arroz-verduras-receta-saludable-facil-deliciosa", ingredients: "Arròs rodó, pebrot, ceba, pèsols, brou de verdura.", metode: "Fer sofregit, afegir arròs i brou calent. 18 minuts." },
+            { nom: "Bacallà amb Samfaina", temps: "35 min", link: "https://www.bonviveur.es/recetas/bacalao-con-samfaina", ingredients: "Bacallà dessalat, albergínia, carbassó, tomàquet.", metode: "Fregir el bacallà. Fer samfaina i coure tot junt 5 minuts." },
+            { nom: "Pollastre al Forn", temps: "60 min", link: "https://www.directoalpaladar.com/recetas-de-carnes-y-aves/pollo-al-horno-receta-facil", ingredients: "Pollastre, patates, ceba, vi blanc, romaní.", metode: "Tot a la safata del forn 200ºC durant 45-50 minuts." },
+            { nom: "Espinacs amb Pinyons", temps: "15 min", link: "https://www.bonviveur.es/recetas/espinacas-a-la-catalana", ingredients: "Espinacs frescos, pinyons, panses, all.", metode: "Saltejar l'all i els fruits secs. Afegir espinacs fins que baixin." },
+            { nom: "Crema de Carbassó", temps: "25 min", link: "https://www.directoalpaladar.com/recetas-de-legumbres-y-verduras/crema-de-calabacin-receta-facil", ingredients: "Carbassó, ceba, patata, formatgets o crema de llet.", metode: "Bullir la verdura i triturar amb el formatge." }
         ];
 
-        function localISODate(date = new Date()) {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
+        // ← NOU: llista d'aliments que caduquen habitualment
+        const alimentsCaducitat = [
+            "Llet", "Llet vegetal", "Iogurt", "Iogurt grec", "Formatge fresc", "Formatge tallat",
+            "Mantequilla", "Nata", "Crema de llet", "Ou", "Ous",
+            "Pollastre", "Pit de pollastre", "Cuixes de pollastre", "Gall dindi", "Hamburguesa",
+            "Carn picada", "Bistec", "Llom de porc", "Costelles", "Botifarra", "Pernil dolç",
+            "Pernil salat", "Fuet", "Xoriço", "Bacó", "Salmó", "Tonyina fresca", "Bacallà",
+            "Gambes", "Musclos", "Rap",
+            "Tofu", "Hummus", "Guacamole",
+            "Enciam", "Espinacs", "Rúcula", "Tomàquet", "Carbassó", "Albergínia", "Pebrot",
+            "Pastanaga", "Api", "Bròquil", "Coliflor", "Mongetes verdes", "Pèsols", "Faves",
+            "Maduixes", "Gerds", "Mango", "Alvocat", "Llimona", "Taronja",
+            "Suc de taronja", "Suc de poma", "Caldo de pollastre", "Caldo de verdures",
+            "Pasta fresca", "Pizza fresca", "Lasanya fresca",
+            "Mantequilla de cacauet", "Melmelada", "Mostassa", "Maionesa", "Ketchup"
+        ];
 
-        function getTemporadaLabel(month) {
-            if ([12, 1, 2].includes(month)) return "Hivern";
-            if ([3, 4, 5].includes(month)) return "Primavera";
-            if ([6, 7, 8].includes(month)) return "Estiu";
-            return "Tardor";
-        }
-
-        function dateSeed(isoDate) {
-            let hash = 0;
-            for (let i = 0; i < isoDate.length; i++) {
-                hash = ((hash << 5) - hash) + isoDate.charCodeAt(i);
-                hash |= 0;
-            }
-            return Math.abs(hash);
-        }
-
-        function filterSuggerimentsPool(month, relax = false) {
-            const { persones, minutsMax, economia } = SUGGERIMENT_CRITERIS;
-            let pool = suggerimentsCatalog.filter(r =>
-                r.mesos.includes(month) &&
-                r.persones === persones &&
-                r.minuts <= minutsMax &&
-                (!economia || r.economia)
-            );
-
-            if (pool.length === 0 || relax) {
-                pool = suggerimentsCatalog.filter(r =>
-                    r.mesos.includes(month) &&
-                    r.persones === persones &&
-                    r.minuts <= minutsMax + 5
-                );
-            }
-
-            if (pool.length === 0) {
-                const adjacent = [month, month === 1 ? 12 : month - 1, month === 12 ? 1 : month + 1];
-                pool = suggerimentsCatalog.filter(r =>
-                    r.mesos.some(m => adjacent.includes(m)) &&
-                    r.persones === persones &&
-                    r.minuts <= minutsMax + 5
-                );
-            }
-
-            return pool.sort((a, b) => a.nom.localeCompare(b.nom, 'ca'));
-        }
-
-        function getDailySuggestion(date = new Date()) {
-            const month = date.getMonth() + 1;
-            const iso = localISODate(date);
-            let pool = filterSuggerimentsPool(month);
-
-            if (pool.length === 0) {
-                pool = suggerimentsCatalog
-                    .filter(r => r.persones === SUGGERIMENT_CRITERIS.persones && r.minuts <= SUGGERIMENT_CRITERIS.minutsMax + 5)
-                    .sort((a, b) => a.nom.localeCompare(b.nom, 'ca'));
-            }
-
-            const index = dateSeed(iso) % pool.length;
-            const recipe = pool[index];
-            return {
-                ...recipe,
-                temps: `~${recipe.minuts} min`,
-                temporada: getTemporadaLabel(month)
-            };
+        function populateDatalist() {
+            const dl = document.getElementById('aliments-suggerits');
+            if (!dl) return;
+            dl.innerHTML = alimentsCaducitat.map(a => `<option value="${a}">`).join('');
         }
 
         window.onload = initFirebase;
@@ -410,6 +323,7 @@
             const config = { databaseURL: "https://calendari-menjars-default-rtdb.europe-west1.firebasedatabase.app" };
             if (!firebase.apps.length) firebase.initializeApp(config);
             db = firebase.database();
+            populateDatalist(); // ← NOU: omple el datalist en carregar
             
             db.ref('aliments').on('value', s => {
                 const val = s.val() || {};
@@ -458,8 +372,12 @@
             const d = new Date();
             const start = new Date(d.setDate(d.getDate() - (d.getDay() || 7) + 1 + (offset * 7)));
             const end = new Date(start); end.setDate(start.getDate() + 6);
+            const text = `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
             const r = document.getElementById('rango-fechas');
-            if(r) r.innerText = `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
+            if(r) r.innerText = text;
+            // NOU: sincronitza el navegador inferior
+            const rb = document.getElementById('rango-fechas-bottom');
+            if(rb) rb.innerText = text;
         }
 
         function renderCalendar() {
@@ -613,30 +531,22 @@
                 container.innerHTML = "";
                 return;
             }
-
-            const recipe = getDailySuggestion(new Date());
+            const day = new Date().getDate();
+            const recipe = suggeriments[day % suggeriments.length];
             const safeNom = recipe.nom.replace(/'/g, "\\'");
             const safeIng = recipe.ingredients.replace(/'/g, "\\'").replace(/\n/g, " ");
             const safeMet = recipe.metode.replace(/'/g, "\\'").replace(/\n/g, " ");
-            const safeLnk = (recipe.link || '').replace(/'/g, "\\'");
-            const linkLabel = recipe.link ? 'VEURE WEB' : 'BUSCAR RECEPTA';
+            const safeLnk = recipe.link.replace(/'/g, "\\'");
 
             container.innerHTML = `
                 <div class="seasonal-suggestion">
                     <div class="flex justify-between items-start mb-2">
                         <span class="text-[10px] font-black text-orange-600 bg-orange-200 px-2 py-1 rounded-lg">SUGGERIMENT DEL DIA 🌿</span>
-                        <span class="text-[10px] font-bold text-slate-500">${recipe.temporada}</span>
+                        <span class="text-[10px] font-bold text-slate-500">⏱️ ${recipe.temps}</span>
                     </div>
-                    <h3 class="text-lg font-black leading-tight mb-2">${recipe.nom}</h3>
-                    <div class="suggestion-badges">
-                        <span class="suggestion-badge">👥 ${recipe.persones} persones</span>
-                        <span class="suggestion-badge">⏱️ ${recipe.temps}</span>
-                        <span class="suggestion-badge">💰 Econòmic</span>
-                        <span class="suggestion-badge">🥬 De temporada</span>
-                    </div>
-                    <p class="text-[11px] font-medium text-slate-600 leading-relaxed mb-3">${recipe.ingredients}</p>
+                    <h3 class="text-lg font-black leading-tight mb-3">${recipe.nom}</h3>
                     <div class="flex gap-2">
-                        <button onclick="handleActionClick(event, '${safeLnk}', '${safeNom}')" class="flex-1 bg-white border border-amber-300 text-amber-700 py-3 rounded-xl text-center text-[11px] font-black">${linkLabel}</button>
+                        <a href="${recipe.link}" target="_blank" class="flex-1 bg-white border border-amber-300 text-amber-700 py-3 rounded-xl text-center text-[11px] font-black">VEURE WEB</a>
                         <button onclick="autoSaveSuggestion('${safeNom}', '${safeIng}', '${safeMet}', '${safeLnk}')" class="flex-1 bg-orange-500 text-white py-3 rounded-xl text-[11px] font-black shadow-md">DESAR ＋</button>
                     </div>
                 </div>
@@ -877,18 +787,14 @@
             setTimeout(() => t.style.display = 'none', 1500);
         };
 
-        function buildRecipeSearchUrl(query) {
-            const cleanQuery = (query || '').replace(/['"]+/g, '').trim();
-            return `https://www.google.com/search?q=${encodeURIComponent('recepta ' + cleanQuery)}`;
-        }
-
         window.handleActionClick = (e, link, query) => {
             e.stopPropagation();
-            const trimmedLink = (link || '').trim();
-            if (trimmedLink && /^https?:\/\//i.test(trimmedLink)) {
-                window.open(trimmedLink, '_blank', 'noopener,noreferrer');
+            if (link) {
+                window.open(link, '_blank');
             } else {
-                window.open(buildRecipeSearchUrl(query), '_blank', 'noopener,noreferrer');
+                const cleanQuery = query.replace(/['"]+/g, '');
+                const googleSearchUrl = `https://www.google.com/search?q=recepta+${encodeURIComponent(cleanQuery)}`;
+                window.open(googleSearchUrl, '_blank');
             }
         };
     </script>
