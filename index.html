@@ -313,19 +313,8 @@
                 render(); 
             });
 
-            // NOU: escolta els noms guardats a caducitats i omple el datalist
-            db.ref('suggeriments_caducitat').on('value', s => {
-                const vals = s.val() || {};
-                const noms = Object.values(vals).sort();
-                const opcions = noms.map(n => `<option value="${n}">`).join('');
-                // El datalist sempre és al DOM ara, però esperem el render per si de cas
-                const tryFill = () => {
-                    const dl = document.getElementById('aliments-suggerits');
-                    if (dl) { dl.innerHTML = opcions; }
-                    else { setTimeout(tryFill, 200); }
-                };
-                tryFill();
-            });
+            // NOU: omple el datalist des de localStorage
+            omplirDatalist();
         }
 
         function cleanExpiredCaducitats() {
@@ -549,14 +538,27 @@
             });
         }
 
+        // NOU: omple el datalist amb els noms desats al localStorage
+        function omplirDatalist() {
+            const dl = document.getElementById('aliments-suggerits');
+            if (!dl) return;
+            const suggeriments = JSON.parse(localStorage.getItem('cad_suggeriments') || '[]');
+            dl.innerHTML = suggeriments.map(n => `<option value="${n}">`).join('');
+        }
+
         window.saveCaducitat = () => {
             const nom = document.getElementById('cad-nom').value.trim();
             const data = document.getElementById('cad-data').value;
             if(!nom || !data) return;
             db.ref('aliments_caducitat').push({ nom, caducitat: data }).then(() => {
-                // NOU: desa el nom com a clau (evita duplicats automàticament)
-                const clau = nom.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                db.ref('suggeriments_caducitat').child(clau).set(nom);
+                // NOU: desa el nom al localStorage com a suggeriment futur
+                const suggeriments = JSON.parse(localStorage.getItem('cad_suggeriments') || '[]');
+                if (!suggeriments.includes(nom)) {
+                    suggeriments.push(nom);
+                    suggeriments.sort();
+                    localStorage.setItem('cad_suggeriments', JSON.stringify(suggeriments));
+                    omplirDatalist();
+                }
                 document.getElementById('cad-nom').value = "";
                 document.getElementById('cad-data').value = "";
                 showToast("Afegit correctament");
