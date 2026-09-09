@@ -423,7 +423,7 @@
             const p = (allSelections[fecha] && Array.isArray(allSelections[fecha][tipo])) ? allSelections[fecha][tipo] : [];
             return p.map((n, i) => `
                 <div class="item-row">
-                    <span class="text-sm font-bold recipe-card-text">${n}</span>
+                    <span class="text-sm font-bold recipe-card-text">${menuEscape(n)}</span>
                     <button onclick="removePlat('${fecha}','${tipo}',${i})" class="text-white/20 hover:text-red-400 ml-2 shrink-0">×</button>
                 </div>
             `).join('');
@@ -793,5 +793,143 @@
         };
     </script>
     <datalist id="aliments-suggerits"></datalist>
+
+    <dialog id="menu-import" aria-labelledby="menu-import-title" style="width:min(92vw,440px);max-height:90dvh;overflow:auto;border:0;border-radius:24px;padding:24px;color:#0f172a">
+      <form id="menu-import-form" style="display:grid;gap:16px">
+        <h2 id="menu-import-title" style="font-size:22px;font-weight:800">📅 Afegir al menú</h2>
+        <p id="menu-import-source"></p>
+        <label>Recepta
+          <input id="menu-import-name" required maxlength="300" style="display:block;width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:12px;font-size:16px">
+        </label>
+        <label>Data
+          <input id="menu-import-date" type="date" required style="display:block;width:100%;min-height:48px;padding:12px;border:1px solid #cbd5e1;border-radius:12px;font-size:16px">
+        </label>
+        <label>Àpat
+          <select id="menu-import-meal" style="display:block;width:100%;min-height:48px;padding:12px;border:1px solid #cbd5e1;border-radius:12px;font-size:16px">
+            <option value="comida">☀️ Dinar</option>
+            <option value="cena">🌙 Sopar</option>
+          </select>
+        </label>
+        <a id="menu-import-original" target="_blank" rel="noopener noreferrer" style="color:#9a3412;text-decoration:underline">Veure la recepta al full</a>
+        <p id="menu-import-status" role="status" aria-live="polite" style="font-size:14px"></p>
+        <button id="menu-import-save" type="submit" style="min-height:48px;background:#ea580c;color:white;border-radius:12px;font-weight:800;padding:12px">Guardar al menú</button>
+        <button id="menu-import-cancel" type="button" style="min-height:48px;padding:12px">Cancel·lar</button>
+      </form>
+    </dialog>
+    <style>
+      #menu-import::backdrop { background:rgba(15,23,42,.75); }
+      #menu-import button:disabled { opacity:.55; cursor:wait; }
+    </style>
+    <script>
+      // Sheets links only prepare a form. The existing selection schema remains string arrays.
+      const menuSources = {
+        programable: { label: 'Programable Olla GM', sheet: '1zB44OQ0x_0jWuEwjvRiAm_4acnxckeI6UJiZNtozX00', gid: '1699928315', index: '1371958977' },
+        batch: { label: 'Batch cooking Olla GM', sheet: '1eHcMhlIPQJ_zAVHNHmpm6k-jfl1H31Kba9Wz1mvthLg', gid: '165440614', index: '1543141548' }
+      };
+      function menuLocalDate(date) {
+        return [date.getFullYear(), String(date.getMonth()+1).padStart(2,'0'), String(date.getDate()).padStart(2,'0')].join('-');
+      }
+      function menuValidDate(value) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+        const date = new Date(value + 'T12:00:00');
+        return !isNaN(date) && menuLocalDate(date) === value;
+      }
+      function menuEscape(value) {
+        return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+      function menuClearParams() {
+        const url = new URL(location.href);
+        ['recipe','source','sheet','row','rid','indexrow'].forEach(key => url.searchParams.delete(key));
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
+      function initMenuImport() {
+        const params = new URLSearchParams(location.search);
+        if (!params.has('recipe')) return;
+        const dialog = document.getElementById('menu-import');
+        const form = document.getElementById('menu-import-form');
+        const nameInput = document.getElementById('menu-import-name');
+        const dateInput = document.getElementById('menu-import-date');
+        const mealInput = document.getElementById('menu-import-meal');
+        const status = document.getElementById('menu-import-status');
+        const save = document.getElementById('menu-import-save');
+        const cancel = document.getElementById('menu-import-cancel');
+        const original = document.getElementById('menu-import-original');
+        const source = menuSources[params.get('source')];
+        nameInput.value = (params.get('recipe') || '').trim().slice(0,300);
+        dateInput.value = menuLocalDate(new Date());
+        document.getElementById('menu-import-source').textContent = source ? source.label : 'Recepta compartida';
+        original.hidden = !source;
+        if (source) {
+          const row = params.get('row');
+          const indexrow = params.get('indexrow');
+          const validRow = value => /^[1-9]\d{0,5}$/.test(value || '');
+          original.href = 'https://docs.google.com/spreadsheets/d/' + source.sheet + '/edit#gid=' +
+            (validRow(row) ? source.gid : source.index) + '&range=A' +
+            (validRow(row) ? row : validRow(indexrow) ? indexrow : '1');
+        }
+        let connected = false;
+        let saving = false;
+        const connection = db.ref('.info/connected');
+        const updateConnection = snapshot => {
+          connected = snapshot.val() === true;
+          save.disabled = saving || !connected;
+          if (!saving) status.textContent = connected
+            ? (nameInput.value ? 'Tria el dia i l’àpat. Els plats que ja hi tens es conservaran.' : 'Falta el nom al full original. Escriu-lo per afegir la recepta.')
+            : 'Esperant connexió per poder guardar…';
+          else if (!connected) status.textContent = 'Esperant connexió. El desament es completarà quan torni.';
+        };
+        connection.on('value', updateConnection);
+        dialog.addEventListener('cancel', event => { if (saving) event.preventDefault(); });
+        dialog.addEventListener('close', () => { connection.off('value', updateConnection); menuClearParams(); }, {once:true});
+        cancel.onclick = () => dialog.close();
+        form.onsubmit = async event => {
+          event.preventDefault();
+          if (saving || !connected || !form.reportValidity()) return;
+          const name = nameInput.value.trim();
+          const day = dateInput.value;
+          const meal = mealInput.value;
+          if (!name || !menuValidDate(day) || !['comida','cena'].includes(meal)) {
+            status.textContent = 'Escriu el nom i tria una data i un àpat vàlids.';
+            return;
+          }
+          saving = true;
+          save.disabled = cancel.disabled = true;
+          nameInput.disabled = dateInput.disabled = mealInput.disabled = true;
+          status.textContent = 'Guardant…';
+          try {
+            const result = await db.ref('seleccions').child(day).child(meal).transaction(current => {
+              if (current !== null && !Array.isArray(current)) return;
+              const next = current ? [...current] : [];
+              if (!next.includes(name)) next.push(name);
+              return next;
+            }, undefined, false);
+            if (!result.committed) throw new Error('Unexpected selection format');
+            const target = new Date(day + 'T12:00:00');
+            const now = new Date();
+            const monday = date => {
+              const copy = new Date(date.getFullYear(),date.getMonth(),date.getDate(),12);
+              copy.setDate(copy.getDate() - ((copy.getDay()+6)%7));
+              return Date.UTC(copy.getFullYear(),copy.getMonth(),copy.getDate());
+            };
+            offset = Math.round((monday(target)-monday(now))/604800000);
+            activeTab = 'none';
+            hasScrolledToToday = true;
+            render();
+            dialog.close();
+            showToast('Guardat: ' + name + ' · ' + day + ' · ' + (meal === 'comida' ? 'Dinar' : 'Sopar'));
+            document.getElementById('list-'+day+'-'+meal)?.scrollIntoView({behavior:'smooth',block:'center'});
+          } catch (error) {
+            status.textContent = 'No s’ha pogut guardar. Comprova la connexió i torna-ho a provar.';
+          } finally {
+            saving = false;
+            save.disabled = !connected;
+            cancel.disabled = nameInput.disabled = dateInput.disabled = mealInput.disabled = false;
+          }
+        };
+        dialog.showModal();
+      }
+      window.onload = () => { initFirebase(); initMenuImport(); };
+    </script>
+
 </body>
 </html>
