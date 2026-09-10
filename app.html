@@ -915,7 +915,7 @@
             activeTab = 'none';
             hasScrolledToToday = true;
             render();
-            dialog.close();
+            dialog.close('saved');
             showToast('Guardat: ' + name + ' · ' + day + ' · ' + (meal === 'comida' ? 'Dinar' : 'Sopar'));
             document.getElementById('list-'+day+'-'+meal)?.scrollIntoView({behavior:'smooth',block:'center'});
           } catch (error) {
