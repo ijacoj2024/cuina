@@ -10,14 +10,23 @@
   } : null;
 
   function parseIngredients(raw) {
-    return [...new Set(raw.split('♦').map(v => v.trim()).filter(Boolean))];
+    return [...new Set(String(raw || '').split('♦').map(v => v.trim()).filter(Boolean))];
+  }
+
+  function parseIngredientText(raw) {
+    if (!raw) return [];
+    return [...new Set(String(raw)
+      .split(/\n|;|,/)
+      .map(v => v.trim())
+      .map(v => v.replace(/^\s*[\d.,/–-]+\s*(?:g|kg|ml|l|u|unitats?|cullerad(?:a|es)|culleradet(?:a|es))?\s*/i, '').trim())
+      .filter(v => v.length > 1))].slice(0, 25);
   }
 
   function deriveIngredientsFromTitle(title) {
     let text = String(title || '').toLowerCase()
       .replace(/^\d+\.\s*/, '')
-      .replace(/\b(exprés|express|base|suau|ràpid(?:a)?|fàcil|guisat(?:s|des)?|estofat(?:s|des)?|al vapor|a la catalana)\b/g, ' ')
-      .replace(/\b(crema|sopa|arròs|amanida|truita|puré|estofat|guisat|saltat|escalivada)\s+(de|d'|amb)?\s*/g, '')
+      .replace(/\b(exprés|express|base|suau|ràpid(?:a)?|fàcil|guisat(?:s|des)?|estofat(?:s|des)?|al vapor|a la catalana|batch|simultanis?|en dos nivells?|en dos temps|per tres usos|per tres àpats|sense remenar|lleuger(?:a)?)\b/g, ' ')
+      .replace(/\b(crema|sopa|arròs|amanida|truita|puré|estofat|guisat|saltat|escalivada|brou|sofregit|salsa|compota|hummus)\s+(de|d'|amb)?\s*/g, '')
       .replace(/\s+(amb|i|més)\s+/g, ',')
       .replace(/\s+de\s+/g, ',')
       .replace(/\s+/g, ' ');
@@ -83,9 +92,9 @@
     const description = mode === 'add'
       ? `Has afegit “${escapeHtml(recipe)}” al menú. Marca només el que vulguis reposar.`
       : `Has tret “${escapeHtml(recipe)}” del menú. Marca els productes que vulguis treure de Bring!`;
-    overlay.innerHTML = `<div class="bring-card" role="dialog" aria-modal="true"><h2>${title}</h2><p>${description}</p><div class="bring-list"></div>${mode === 'remove' ? '<p class="bring-note">Per seguretat, no esborrem res automàticament de Bring!. T’obrirem Bring! amb la llista dels productes seleccionats perquè els treguis.</p>' : ''}<div class="bring-actions"><button class="bring-btn bring-secondary" data-skip>Ara no</button><button class="bring-btn bring-primary" data-ok>${mode === 'add' ? 'Afegir a Bring!' : 'Obrir Bring i treure’ls'}</button></div></div>`;
+    overlay.innerHTML = `<div class="bring-card" role="dialog" aria-modal="true"><h2>${title}</h2><p>${description}</p><div class="bring-list"></div>${mode === 'remove' ? '<p class="bring-note">No esborrem res automàticament de Bring!. T’obrirem Bring! amb els productes seleccionats perquè confirmis què vols treure.</p>' : ''}<div class="bring-actions"><button class="bring-btn bring-secondary" data-skip>Ara no</button><button class="bring-btn bring-primary" data-ok>${mode === 'add' ? 'Afegir a Bring!' : 'Obrir Bring i treure’ls'}</button></div></div>`;
     const list = overlay.querySelector('.bring-list');
-    items.forEach((item, idx) => {
+    items.forEach(item => {
       const row = document.createElement('label');
       row.className = 'bring-item';
       row.innerHTML = `<input type="checkbox" value="${escapeHtml(item)}"><span>${escapeHtml(item)}${warnings[item] ? '<span class="bring-warning">⚠️ També el necessita una altra recepta del menú</span>' : ''}</span>`;
@@ -95,7 +104,8 @@
     overlay.querySelector('[data-ok]').onclick = () => {
       const selected = [...overlay.querySelectorAll('input:checked')].map(el => el.value);
       if (!selected.length) { overlay.remove(); onSkip?.(); return; }
-      overlay.remove(); onConfirm?.(selected);
+      overlay.remove();
+      onConfirm?.(selected);
     };
     document.body.appendChild(overlay);
   }
@@ -131,6 +141,21 @@
     if (typeof showToast === 'function') showToast('Productes a treure copiats. Revisa’ls a Bring!');
   }
 
+  function askToAdd(day, meal, recipe, items, extra = {}) {
+    const cleaned = [...new Set((items || []).map(v => String(v).trim()).filter(Boolean))];
+    if (!cleaned.length) return;
+    const key = safeKey(recipe);
+    showChoiceDialog({
+      mode: 'add', recipe, items: cleaned,
+      onConfirm: async selected => {
+        await db.ref('bring_recipe_items').child(day).child(meal).child(key).set({
+          recipe, items: selected, source: extra.source || '', rid: extra.rid || '', updatedAt: Date.now()
+        });
+        await sendToBring(recipe, selected);
+      }
+    });
+  }
+
   function hookImportedRecipe() {
     if (!pendingImport) return;
     const dialog = document.getElementById('menu-import');
@@ -152,16 +177,33 @@
         if (!Array.isArray(arr) || !arr.includes(submitted.recipe)) return;
       } catch (_) { return; }
       const items = pendingImport.ingredients.length ? pendingImport.ingredients : deriveIngredientsFromTitle(submitted.recipe);
-      if (!items.length) return;
-      const key = safeKey(submitted.recipe);
-      showChoiceDialog({
-        mode: 'add', recipe: submitted.recipe, items,
-        onConfirm: async selected => {
-          await db.ref('bring_recipe_items').child(submitted.day).child(submitted.meal).child(key).set({recipe: submitted.recipe, items: selected, source: pendingImport.source, rid: pendingImport.rid, updatedAt: Date.now()});
-          await sendToBring(submitted.recipe, selected);
-        }
-      });
+      askToAdd(submitted.day, submitted.meal, submitted.recipe, items, {source: pendingImport.source, rid: pendingImport.rid});
     }, {once:true});
+  }
+
+  function hookExistingWebAdditions() {
+    const original = window.addAndClose;
+    if (typeof original !== 'function' || original.__bringWrapped) return;
+    const wrapped = function(day, meal, recipe, el) {
+      let items = [];
+      try {
+        const found = typeof allAliments !== 'undefined' && Array.isArray(allAliments)
+          ? allAliments.find(a => a && a.nom === recipe)
+          : null;
+        items = parseIngredientText(found?.ingredients || '');
+      } catch (_) {}
+      if (!items.length) items = deriveIngredientsFromTitle(recipe);
+      original(day, meal, recipe, el);
+      setTimeout(async () => {
+        try {
+          const snap = await db.ref('seleccions').child(day).child(meal).once('value');
+          const arr = snap.val();
+          if (Array.isArray(arr) && arr.includes(recipe)) askToAdd(day, meal, recipe, items, {source:'web'});
+        } catch (_) {}
+      }, 350);
+    };
+    wrapped.__bringWrapped = true;
+    window.addAndClose = wrapped;
   }
 
   function hookMealRemoval() {
@@ -177,18 +219,23 @@
       original(day, meal, index);
       if (!recipe) return;
       const key = safeKey(recipe);
-      try {
-        const metaRef = db.ref('bring_recipe_items').child(day).child(meal).child(key);
-        const snap = await metaRef.once('value');
-        const meta = snap.val();
-        if (!meta || !Array.isArray(meta.items) || !meta.items.length) return;
-        const warnings = await getOtherUsage(meta.items, {day, meal, key});
-        showChoiceDialog({
-          mode: 'remove', recipe, items: meta.items, warnings,
-          onConfirm: async selected => { await openBringForRemoval(recipe, selected); await metaRef.remove(); },
-          onSkip: () => metaRef.remove()
-        });
-      } catch (_) {}
+      setTimeout(async () => {
+        try {
+          const currentSnap = await db.ref('seleccions').child(day).child(meal).once('value');
+          const current = currentSnap.val();
+          if (Array.isArray(current) && current.includes(recipe)) return;
+          const metaRef = db.ref('bring_recipe_items').child(day).child(meal).child(key);
+          const snap = await metaRef.once('value');
+          const meta = snap.val();
+          if (!meta || !Array.isArray(meta.items) || !meta.items.length) return;
+          const warnings = await getOtherUsage(meta.items, {day, meal, key});
+          showChoiceDialog({
+            mode: 'remove', recipe, items: meta.items, warnings,
+            onConfirm: async selected => { await openBringForRemoval(recipe, selected); await metaRef.remove(); },
+            onSkip: () => metaRef.remove()
+          });
+        } catch (_) {}
+      }, 350);
     };
     wrapped.__bringWrapped = true;
     window.removePlat = wrapped;
@@ -197,6 +244,7 @@
   window.addEventListener('load', () => {
     setTimeout(() => {
       hookImportedRecipe();
+      hookExistingWebAdditions();
       hookMealRemoval();
     }, 0);
   });
