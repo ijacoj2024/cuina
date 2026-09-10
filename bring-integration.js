@@ -8,6 +8,7 @@
     rid: capturedParams.get('rid') || '',
     ingredients: parseIngredients(capturedParams.get('ingredients') || '')
   } : null;
+  const LOCAL_KEY = 'cuina_bring_recipe_items_v1';
 
   function parseIngredients(raw) {
     return [...new Set(String(raw || '').split('♦').map(v => v.trim()).filter(Boolean))];
@@ -37,7 +38,26 @@
   }
 
   function esc(value) {
-    return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  }
+
+  function localRead() {
+    try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}') || {}; } catch (_) { return {}; }
+  }
+  function localWrite(data) {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); } catch (_) {}
+  }
+  function localId(day, meal, recipe) { return `${day}|${meal}|${safeKey(recipe)}`; }
+  function localSave(day, meal, recipe, data) {
+    const all = localRead();
+    all[localId(day, meal, recipe)] = data;
+    localWrite(all);
+  }
+  function localGet(day, meal, recipe) { return localRead()[localId(day, meal, recipe)] || null; }
+  function localRemove(day, meal, recipe) {
+    const all = localRead();
+    delete all[localId(day, meal, recipe)];
+    localWrite(all);
   }
 
   function ensureStyles() {
@@ -83,7 +103,7 @@
     document.body.appendChild(overlay);
   }
 
-  async function showTransferDialog(recipe, items, action = 'add') {
+  function showTransferDialog(recipe, items, action = 'add') {
     ensureStyles();
     document.querySelector('.bring-overlay')?.remove();
     const overlay = document.createElement('div');
@@ -99,12 +119,8 @@
     const text = items.join('\n');
     const copyBtn = overlay.querySelector('[data-copy]');
     copyBtn.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(text);
-        copyBtn.textContent = '✓ Llista copiada';
-      } catch (_) {
-        copyBtn.textContent = 'Mantén premut i copia manualment';
-      }
+      try { await navigator.clipboard.writeText(text); copyBtn.textContent = '✓ Llista copiada'; }
+      catch (_) { copyBtn.textContent = 'No s’ha pogut copiar automàticament'; }
     };
     overlay.querySelector('[data-open]').onclick = async () => {
       try { await navigator.clipboard.writeText(text); copyBtn.textContent = '✓ Llista copiada'; } catch (_) {}
@@ -114,13 +130,24 @@
     document.body.appendChild(overlay);
   }
 
+  async function bestEffortFirebaseSave(day, meal, recipe, selected, extra) {
+    try {
+      await db.ref('bring_recipe_items').child(day).child(meal).child(safeKey(recipe)).set({recipe, items:selected, source:extra.source || '', rid:extra.rid || '', updatedAt:Date.now()});
+    } catch (_) {}
+  }
+
   async function getOtherUsage(items, current) {
     const result = Object.fromEntries(items.map(i => [i, false]));
+    const local = localRead();
+    Object.entries(local).forEach(([id, rec]) => {
+      if (id === localId(current.day, current.meal, current.recipe)) return;
+      (rec.items || []).forEach(item => { if (item in result) result[item] = true; });
+    });
     try {
       const [metaSnap, selSnap] = await Promise.all([db.ref('bring_recipe_items').once('value'), db.ref('seleccions').once('value')]);
       const meta = metaSnap.val() || {}, selections = selSnap.val() || {};
       Object.entries(meta).forEach(([day, meals]) => Object.entries(meals || {}).forEach(([meal, recipes]) => Object.entries(recipes || {}).forEach(([key, rec]) => {
-        if (day === current.day && meal === current.meal && key === current.key) return;
+        if (day === current.day && meal === current.meal && rec.recipe === current.recipe) return;
         const scheduled = selections?.[day]?.[meal];
         if (!Array.isArray(scheduled) || !scheduled.includes(rec.recipe)) return;
         (rec.items || []).forEach(item => { if (item in result) result[item] = true; });
@@ -132,10 +159,11 @@
   function askToAdd(day, meal, recipe, items, extra = {}) {
     const cleaned = [...new Set((items || []).map(v => String(v).trim()).filter(Boolean))];
     if (!cleaned.length) return;
-    const key = safeKey(recipe);
-    showChoiceDialog({mode:'add', recipe, items:cleaned, onConfirm: async selected => {
-      await db.ref('bring_recipe_items').child(day).child(meal).child(key).set({recipe, items:selected, source:extra.source || '', rid:extra.rid || '', updatedAt:Date.now()});
-      await showTransferDialog(recipe, selected, 'add');
+    showChoiceDialog({mode:'add', recipe, items:cleaned, onConfirm: selected => {
+      const record = {recipe, items:selected, source:extra.source || '', rid:extra.rid || '', updatedAt:Date.now()};
+      localSave(day, meal, recipe, record);
+      showTransferDialog(recipe, selected, 'add');
+      bestEffortFirebaseSave(day, meal, recipe, selected, extra);
     }});
   }
 
@@ -194,22 +222,32 @@
       } catch (_) {}
       original(day, meal, index);
       if (!recipe) return;
-      const key = safeKey(recipe);
       setTimeout(async () => {
         try {
           const currentSnap = await db.ref('seleccions').child(day).child(meal).once('value');
           const current = currentSnap.val();
           if (Array.isArray(current) && current.includes(recipe)) return;
-          const metaRef = db.ref('bring_recipe_items').child(day).child(meal).child(key);
-          const snap = await metaRef.once('value');
-          const meta = snap.val();
-          if (!meta || !Array.isArray(meta.items) || !meta.items.length) return;
-          const warnings = await getOtherUsage(meta.items, {day, meal, key});
-          showChoiceDialog({mode:'remove', recipe, items:meta.items, warnings, onConfirm: async selected => {
-            await showTransferDialog(recipe, selected, 'remove');
-            await metaRef.remove();
-          }, onSkip: () => metaRef.remove()});
         } catch (_) {}
+        let meta = localGet(day, meal, recipe);
+        let metaRef = null;
+        if (!meta) {
+          try {
+            metaRef = db.ref('bring_recipe_items').child(day).child(meal).child(safeKey(recipe));
+            const snap = await metaRef.once('value');
+            meta = snap.val();
+          } catch (_) {}
+        }
+        if (!meta || !Array.isArray(meta.items) || !meta.items.length) return;
+        const warnings = await getOtherUsage(meta.items, {day, meal, recipe});
+        showChoiceDialog({mode:'remove', recipe, items:meta.items, warnings, onConfirm: selected => {
+          showTransferDialog(recipe, selected, 'remove');
+          localRemove(day, meal, recipe);
+          if (metaRef) metaRef.remove().catch(() => {});
+          else { try { db.ref('bring_recipe_items').child(day).child(meal).child(safeKey(recipe)).remove(); } catch (_) {} }
+        }, onSkip: () => {
+          localRemove(day, meal, recipe);
+          try { db.ref('bring_recipe_items').child(day).child(meal).child(safeKey(recipe)).remove(); } catch (_) {}
+        }});
       }, 350);
     };
     wrapped.__bringWrapped = true;
