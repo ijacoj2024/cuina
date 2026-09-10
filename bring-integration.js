@@ -38,7 +38,7 @@
   }
 
   function esc(value) {
-    return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+    return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   function localRead() {
@@ -82,12 +82,20 @@
     document.querySelector('.bring-overlay')?.remove();
     const overlay = document.createElement('div');
     overlay.className = 'bring-overlay';
-    const title = mode === 'add' ? 'Quins aliments vols preparar per a Bring?' : 'Vols treure també aliments de la llista de la compra?';
+    const title = mode === 'add' ? 'Quins aliments vols afegir a la llista de la compra?' : 'Vols treure també aliments de la llista de la compra?';
     const description = mode === 'add'
       ? `Has afegit “${esc(recipe)}” al menú. Marca només el que vulguis reposar.`
       : `Has tret “${esc(recipe)}” del menú. Marca els productes que vulguis revisar a Bring.`;
     overlay.innerHTML = `<div class="bring-card" role="dialog" aria-modal="true"><h2>${title}</h2><p>${description}</p><div class="bring-list"></div>${mode === 'remove' ? '<p class="bring-note">Bring no permet que aquesta web esborri productes automàticament. Et prepararem la llista perquè la revisis.</p>' : ''}<div class="bring-actions"><button class="bring-btn bring-secondary" data-skip>Ara no</button><button class="bring-btn bring-primary" data-ok>${mode === 'add' ? 'Continuar' : 'Preparar per treure'}</button></div></div>`;
     const list = overlay.querySelector('.bring-list');
+    if (mode === 'add' && !items.length) {
+      const note = document.createElement('p');
+      note.textContent='No hi ha ingredients detallats disponibles. Escriu els aliments, un per línia.';
+      const entry=document.createElement('textarea');entry.setAttribute('aria-label','Aliments, un per línia');entry.style.cssText='width:100%;min-height:110px;border:1px solid #cbd5e1;padding:12px';
+      const prepare=document.createElement('button');prepare.textContent='Mostrar caselles';prepare.className='bring-btn bring-secondary';
+      prepare.onclick=()=>{const names=parseIngredients(entry.value.split(/\r?\n/).join('♦'));showChoiceDialog({mode,recipe,items:names,warnings,onConfirm,onSkip});};
+      list.append(note,entry,prepare);
+    }
     items.forEach(item => {
       const row = document.createElement('label');
       row.className = 'bring-item';
@@ -111,19 +119,31 @@
     const isAdd = action === 'add';
     overlay.innerHTML = `<div class="bring-card" role="dialog" aria-modal="true">
       <h2>${isAdd ? 'Llista preparada per a Bring' : 'Productes a revisar a Bring'}</h2>
-      <p>${isAdd ? 'Aquests productes encara NO s’han afegit a Bring. Copia’ls i després obre Bring per enganxar-los.' : 'Aquests productes encara NO s’han tret de Bring. Copia la llista i revisa’ls dins de Bring.'}</p>
+      <p>${isAdd ? 'Importa els ingredients a Bring! i afegeix-los individualment a la llista des d’allà.' : 'Aquests productes encara NO s’han tret de Bring. Revisa’ls i elimina’ls manualment dins de Bring.'}</p>
       <div class="bring-listbox">${items.map(x => `<div>• ${esc(x)}</div>`).join('')}</div>
-      <div class="bring-actions"><button class="bring-btn bring-secondary" data-copy>📋 Copiar llista</button><button class="bring-btn bring-green" data-open>🛒 Obrir Bring</button></div>
+      ${isAdd ? '' : '<div class="bring-actions"><button class="bring-btn bring-green" data-open>🛒 Obrir Bring</button></div>'}
       <button class="bring-btn bring-secondary" style="width:100%;margin-top:10px" data-close>Tancar</button>
     </div>`;
-    const text = items.join('\n');
-    const copyBtn = overlay.querySelector('[data-copy]');
-    copyBtn.onclick = async () => {
-      try { await navigator.clipboard.writeText(text); copyBtn.textContent = '✓ Llista copiada'; }
-      catch (_) { copyBtn.textContent = 'No s’ha pogut copiar automàticament'; }
-    };
-    overlay.querySelector('[data-open]').onclick = async () => {
-      try { await navigator.clipboard.writeText(text); copyBtn.textContent = '✓ Llista copiada'; } catch (_) {}
+    if(isAdd){
+      const importButton=document.createElement('button');importButton.className='bring-btn bring-primary';importButton.style.width='100%';importButton.textContent='Importar ingredients a Bring!';
+      const message=document.createElement('p');message.setAttribute('role','status');
+      overlay.querySelector('.bring-listbox').after(importButton,message);
+      importButton.onclick=async()=>{
+        importButton.disabled=true;message.textContent='Preparant la importació…';
+        const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
+        try{
+          const selected=items.slice(0,40).map(itemId=>({itemId:String(itemId).slice(0,200),stock:false}));
+          const ref=db.ref('bring_exports').push();
+          await ref.set({name:('Compra: '+recipe).slice(0,310),author:'Cuina de Pep',linkOutUrl:'https://ijacoj2024.github.io/cuina/',items:selected,ingredients:selected,enableQuantityChange:false,expiresAt:Date.now()+23*60*60*1000});
+          const url='https://api.getbring.com/rest/bringrecipes/deeplink?source=web&url='+encodeURIComponent(ref.toString()+'.json');
+          message.textContent='Completa la importació a Bring!. Encara no podem confirmar que s’hi hagin afegit.';
+          const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';link.textContent='Obrir importació a Bring!';message.append(link);
+          if(tab)tab.location.href=url;importButton.hidden=true;
+        }catch(error){if(tab)tab.close();message.textContent='No s’ha pogut preparar la importació. Torna-ho a provar.';}
+        finally{importButton.disabled=false;}
+      };
+    }
+    if (!isAdd) overlay.querySelector('[data-open]').onclick = () => {
       window.open('https://web.getbring.com', '_blank', 'noopener');
     };
     overlay.querySelector('[data-close]').onclick = () => overlay.remove();
@@ -138,19 +158,26 @@
 
   async function getOtherUsage(items, current) {
     const result = Object.fromEntries(items.map(i => [i, false]));
+    const today=new Date();const todayKey=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+    const normalize=s=>String(s).trim().toLocaleLowerCase('ca');
+    const mark=value=>items.forEach(i=>{if(normalize(i)===normalize(value))result[i]=true;});
     const local = localRead();
     Object.entries(local).forEach(([id, rec]) => {
       if (id === localId(current.day, current.meal, current.recipe)) return;
-      (rec.items || []).forEach(item => { if (item in result) result[item] = true; });
+      const [day,meal]=id.split('|');
+      if(day<todayKey)return;
+      const scheduled=typeof allSelections!=='undefined'?allSelections?.[day]?.[meal]:null;
+      if(!Array.isArray(scheduled)||!scheduled.includes(rec.recipe))return;
+      (rec.items || []).forEach(mark);
     });
     try {
       const [metaSnap, selSnap] = await Promise.all([db.ref('bring_recipe_items').once('value'), db.ref('seleccions').once('value')]);
       const meta = metaSnap.val() || {}, selections = selSnap.val() || {};
       Object.entries(meta).forEach(([day, meals]) => Object.entries(meals || {}).forEach(([meal, recipes]) => Object.entries(recipes || {}).forEach(([key, rec]) => {
-        if (day === current.day && meal === current.meal && rec.recipe === current.recipe) return;
+        if (day < todayKey || (day === current.day && meal === current.meal && rec.recipe === current.recipe)) return;
         const scheduled = selections?.[day]?.[meal];
         if (!Array.isArray(scheduled) || !scheduled.includes(rec.recipe)) return;
-        (rec.items || []).forEach(item => { if (item in result) result[item] = true; });
+        (rec.items || []).forEach(mark);
       })));
     } catch (_) {}
     return result;
@@ -158,7 +185,7 @@
 
   function askToAdd(day, meal, recipe, items, extra = {}) {
     const cleaned = [...new Set((items || []).map(v => String(v).trim()).filter(Boolean))];
-    if (!cleaned.length) return;
+
     showChoiceDialog({mode:'add', recipe, items:cleaned, onConfirm: selected => {
       const record = {recipe, items:selected, source:extra.source || '', rid:extra.rid || '', updatedAt:Date.now()};
       localSave(day, meal, recipe, record);
@@ -176,13 +203,14 @@
       submitted = {day:document.getElementById('menu-import-date')?.value, meal:document.getElementById('menu-import-meal')?.value, recipe:document.getElementById('menu-import-name')?.value?.trim() || pendingImport.recipe};
     }, true);
     dialog.addEventListener('close', async () => {
+      if (dialog.returnValue !== 'saved') return;
       if (!submitted?.day || !submitted?.meal || !submitted?.recipe) return;
       try {
         const snap = await db.ref('seleccions').child(submitted.day).child(submitted.meal).once('value');
         const arr = snap.val();
         if (!Array.isArray(arr) || !arr.includes(submitted.recipe)) return;
       } catch (_) { return; }
-      const items = pendingImport.ingredients.length ? pendingImport.ingredients : deriveIngredientsFromTitle(submitted.recipe);
+      const items = pendingImport.ingredients.length ? pendingImport.ingredients : [];
       askToAdd(submitted.day, submitted.meal, submitted.recipe, items, {source:pendingImport.source, rid:pendingImport.rid});
     }, {once:true});
   }
@@ -194,9 +222,9 @@
       let items = [];
       try {
         const found = typeof allAliments !== 'undefined' && Array.isArray(allAliments) ? allAliments.find(a => a && a.nom === recipe) : null;
-        items = parseIngredientText(found?.ingredients || '');
+        items = parseIngredientText(found?.ingredients || found?.ingredientes || '');
       } catch (_) {}
-      if (!items.length) items = deriveIngredientsFromTitle(recipe);
+      
       original(day, meal, recipe, el);
       setTimeout(async () => {
         try {
@@ -222,12 +250,14 @@
       } catch (_) {}
       original(day, meal, index);
       if (!recipe) return;
+      const now=new Date();const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+      if(day<=today)return;
       setTimeout(async () => {
         try {
           const currentSnap = await db.ref('seleccions').child(day).child(meal).once('value');
           const current = currentSnap.val();
           if (Array.isArray(current) && current.includes(recipe)) return;
-        } catch (_) {}
+        } catch (_) { return; }
         let meta = localGet(day, meal, recipe);
         let metaRef = null;
         if (!meta) {
