@@ -12,14 +12,14 @@
     const response = await fetch('app.html', {cache:'no-store'});
     let html = await response.text();
     const scripts = [
-      'recipe-ingredients-1.js?v=20260912b',
-      'recipe-ingredients-2.js?v=20260912b',
-      'recipe-ingredients-3.js?v=20260912b',
-      'recipe-ingredients-4.js?v=20260912b',
-      'recipe-ingredients-5.js?v=20260912b',
-      'recipe-ingredients-6.js?v=20260912b',
-      'recipe-ingredients-loader.js?v=20260912b',
-      'bring-integration.js?v=20260912b'
+      'recipe-ingredients-1.js?v=20260912c',
+      'recipe-ingredients-2.js?v=20260912c',
+      'recipe-ingredients-3.js?v=20260912c',
+      'recipe-ingredients-4.js?v=20260912c',
+      'recipe-ingredients-5.js?v=20260912c',
+      'recipe-ingredients-6.js?v=20260912c',
+      'recipe-ingredients-loader.js?v=20260912c',
+      'bring-integration.js?v=20260912c'
     ].map(src => '<script src="' + src + '"></' + 'script>').join('');
     html = html.replace('</body>', scripts + '</body>');
     document.open();
