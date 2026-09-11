@@ -1,0 +1,1 @@
+window.CUINA_RECIPE_INGREDIENTS=Object.assign(window.CUINA_RECIPE_INGREDIENTS||{},{"crema de verdures d aprofitament amb truita":["Verdures sobrants (carbassó, pastanaga, moniato, porro...) (1–1,2 kg)","Aigua (500–700 ml)","Ous (6–8)","Oli i sal (al gust)"]});
