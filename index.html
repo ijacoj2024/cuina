@@ -11,7 +11,17 @@
   try {
     const response = await fetch('app.html', {cache:'no-store'});
     let html = await response.text();
-    html = html.replace('</body>', '<script src="bring-integration.js?v=20260912a"></' + 'script></body>');
+    const scripts = [
+      'recipe-ingredients-1.js?v=20260912b',
+      'recipe-ingredients-2.js?v=20260912b',
+      'recipe-ingredients-3.js?v=20260912b',
+      'recipe-ingredients-4.js?v=20260912b',
+      'recipe-ingredients-5.js?v=20260912b',
+      'recipe-ingredients-6.js?v=20260912b',
+      'recipe-ingredients-loader.js?v=20260912b',
+      'bring-integration.js?v=20260912b'
+    ].map(src => '<script src="' + src + '"></' + 'script>').join('');
+    html = html.replace('</body>', scripts + '</body>');
     document.open();
     document.write(html);
     document.close();
