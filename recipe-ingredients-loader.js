@@ -11,9 +11,24 @@
       .replace(/\s+/g, ' ');
   }
 
+  function deriveIngredientsFromTitle(title) {
+    let text = normalizeRecipeName(title)
+      .replace(/\b(expres|express|base|suau|rapid|rapida|facil|guisat|guisada|estofat|estofada|al vapor|a la catalana|batch|simultani|simultanis|intens|versio)\b/g, ' ')
+      .replace(/\b(crema|sopa|brou|amanida|truita|pure|samfaina|pisto)\b/g, ' ')
+      .replace(/\b(amb|i|mes|de|del|dels|les|la|el|al|a les)\b/g, ',')
+      .replace(/\s+/g, ' ');
+    return [...new Set(text.split(',').map(x => x.trim()).filter(x => x.length > 2))].slice(0, 10);
+  }
+
   function getFallbackIngredients(recipeName) {
     const map = window.CUINA_RECIPE_INGREDIENTS || {};
-    return map[normalizeRecipeName(recipeName)] || [];
+    const mapped = [...(map[normalizeRecipeName(recipeName)] || [])];
+    const derived = deriveIngredientsFromTitle(recipeName);
+    const isGeneric = mapped.some(x => /^(Hortalisses indicades|Verdures indicades|Ingredients indicats)/i.test(x));
+    if (!mapped.length) return derived;
+    if (!isGeneric) return mapped;
+    const usefulMapped = mapped.filter(x => !/^(Hortalisses indicades|Verdures indicades|Ingredients indicats)/i.test(x));
+    return [...new Set([...derived, ...usefulMapped])];
   }
 
   function hydrateIngredients() {
