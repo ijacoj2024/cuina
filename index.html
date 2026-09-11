@@ -11,7 +11,7 @@
   try {
     const response = await fetch('app.html', {cache:'no-store'});
     let html = await response.text();
-    html = html.replace('</body>', '<script src="bring-integration.js?v=20260910c"></' + 'script></body>');
+    html = html.replace('</body>', '<script src="bring-integration.js?v=20260912a"></' + 'script></body>');
     document.open();
     document.write(html);
     document.close();
