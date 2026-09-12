@@ -1,1 +1,36 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuina de Casa Pro</title>
+</head>
+<body>
+<script>
+(async () => {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/ijacoj2024/cuina/693bf27fdf3730bd77c93750c70a1da5a038787d/app.html', {cache:'no-store'});
+    let html = await response.text();
+    if (!response.ok || !html.includes('<!DOCTYPE html>')) throw new Error('No s\'ha pogut recuperar la versió estable');
+    const scripts = [
+      'recipe-ingredients-1.js?v=20260912e',
+      'recipe-ingredients-2.js?v=20260912e',
+      'recipe-ingredients-3.js?v=20260912e',
+      'recipe-ingredients-4.js?v=20260912e',
+      'recipe-ingredients-5.js?v=20260912e',
+      'recipe-ingredients-6.js?v=20260912e',
+      'recipe-ingredients-loader.js?v=20260912e',
+      'bring-integration.js?v=20260912e',
+      'caducitat-recipes.js?v=20260912e'
+    ].map(src => '<script src="' + src + '"></' + 'script>').join('');
+    html = html.replace('</body>', scripts + '</body>');
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (e) {
+    document.body.innerHTML = '<p style="font-family:sans-serif;padding:24px">No s\'ha pogut carregar el calendari. Recarrega la pàgina.</p>';
+  }
+})();
+</script>
+</body>
+</html>
